@@ -10,7 +10,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # 🔐 SECURITY WARNING: Don't hardcode secret keys in production!
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'unsafe-secret-key-for-dev')
 
-DEBUG = os.getenv('DEBUG', 'False') == 'True'
+DEBUG = True
+# DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 # Railway automatically injects your app domain in production.
 # ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
@@ -102,6 +103,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ✅ CSRF / COOKIE settings for production
 CSRF_TRUSTED_ORIGINS = [
+    'https://uniquedashboard.up.railway.app/',
     'https://*.railway.app',
     'http://localhost',
     'http://127.0.0.1',
