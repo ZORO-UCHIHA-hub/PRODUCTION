@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const form = document.getElementById('orderForm');
   if (!form) return;
 
+  // Open customer modal on phone click
   const customerPhoneInput = document.getElementById('customerPhone');
   if (customerPhoneInput) {
     customerPhoneInput.addEventListener('click', () => {
@@ -12,16 +13,17 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  // Handle form submission
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
 
+    // Gather data
     const customerId = document.getElementById('customer_id').value;
     const customerName = document.getElementById('custName').textContent;
     const customerPhone = document.getElementById('custPhone').textContent.replace(/\D/g, '');
     const customerGST = document.getElementById('custGST').textContent;
     const gstInput = document.getElementById('gst_number').value;
     const branchId = document.getElementById('branchSelect').value;
-
     const total = parseFloat(document.getElementById('grandTotal').value) || 0;
     const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
 
@@ -56,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       const editingSaleId = document.getElementById('editing-sale-id')?.value;
       const url = editingSaleId
-        ? `/orders/edit/${editingSaleId}/save/`
+        ? `/orders/${editingSaleId}/update/`
         : '/orders/new/';
 
       const response = await fetch(url, {
@@ -69,24 +71,18 @@ document.addEventListener('DOMContentLoaded', function () {
       });
 
       const result = await response.json();
+
       if (result.sale_id) {
-<<<<<<< HEAD
+        // ✅ Show receipt preview
         showReceiptPreview(customerName, customerPhone, customerGST, items, total, paid);
-        setTimeout(() => printReceipt(), 500);
+
+        // ✅ Open print-friendly receipt
+        const receiptURL = `/orders/thermal-receipt/${result.sale_id}/`;
+        window.open(receiptURL, '_blank', 'width=400,height=600');
+
+        // ✅ Optional: send via WhatsApp
         sendWhatsAppReceipt(customerPhone, customerName, total, paid);
       } else {
-=======
-  // Optional: still show receipt preview
-  showReceiptPreview(customerName, customerPhone, customerGST, items, total, paid);
-
-  // Auto-open print-optimized receipt for thermal
-  const url = `/orders/thermal-receipt/${result.sale_id}/`;
-  const win = window.open(url, '_blank', 'width=400,height=600');
-
-  // Optional WhatsApp send
-  sendWhatsAppReceipt(customerPhone, customerName, total, paid);
-}else {
->>>>>>> 168772b (New)
         alert(result.error || "❌ Something went wrong!");
       }
     } catch (err) {
@@ -95,6 +91,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
+  // Get CSRF token from cookie
   function getCSRFToken() {
     const name = 'csrftoken';
     const cookie = document.cookie.split(';').find(c => c.trim().startsWith(name + '='));
@@ -129,20 +126,15 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById("receiptModal").style.display = "flex";
   };
 
-window.printReceipt = function (saleId) {
-  const printWindow = window.open(`/orders/thermal-receipt/${saleId}`, '_blank', 'width=400,height=600');
+  // 🖨️ Print receipt from thermal view
+  window.printReceipt = function (saleId) {
+    const printWindow = window.open(`/orders/thermal-receipt/${saleId}`, '_blank', 'width=400,height=600');
+    if (!printWindow) {
+      alert("❌ Popup was blocked! Please allow popups for this site.");
+    }
+  };
 
-  if (!printWindow) {
-    alert("❌ Popup was blocked! Please allow popups for this site.");
-    return;
-  }
-
-  // ✅ Let the thermal receipt template do the printing itself
-};
-
-
-
-  // 📱 WhatsApp Receipt
+  // 📱 Send WhatsApp receipt
   function sendWhatsAppReceipt(phone, name, total, paid) {
     if (!phone || phone.length < 10) return;
 
