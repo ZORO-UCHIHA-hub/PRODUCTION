@@ -7,6 +7,15 @@
 <main>
   <h1>Employees</h1>
 
+  <!-- ✅ Flash messages -->
+  {% if messages %}
+    <div class="messages">
+      {% for message in messages %}
+        <div class="alert {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
   <div class="insights">
     <div class="card">
       <span class="material-symbols-sharp">group</span>
@@ -37,15 +46,13 @@
           <td>{{ emp.branch.name }}</td>
           <td class="success">Active</td>
           <td class="actions">
-            <!-- <a href="#" class="action-btn"><span class="material-symbols-sharp">edit</span></a> -->
             {% if emp.user.id %}
-  <a href="{% url 'delete_employee' emp.user.id %}">
-    <span class="material-symbols-sharp">delete</span>
-  </a>
-{% else %}
-  <span class="text-muted">N/A</span>
-{% endif %}
-
+              <a href="{% url 'delete_employee' emp.user.id %}">
+                <span class="material-symbols-sharp">delete</span>
+              </a>
+            {% else %}
+              <span class="text-muted">N/A</span>
+            {% endif %}
           </td>
         </tr>
         {% empty %}
@@ -73,7 +80,6 @@
 
     <form id="employeeForm" method="POST" action="{% url 'employees' %}">
       {% csrf_token %}
-
       <label for="empName">Name</label>
       <input type="text" id="empName" name="empName" required>
 
@@ -96,6 +102,9 @@
         {% endfor %}
       </datalist>
       <button type="button" id="openBranchModal" class="btn-small">+ Create Branch</button>
+
+      <!-- ✅ Hidden field to capture new branch location -->
+      <input type="hidden" id="newBranchLocation" name="new_branch_location" />
 
       <p id="jsErrorMessage" style="color: red; display: none; margin-top: 10px;"></p>
 
@@ -133,10 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const branchInput = document.getElementById('branchName');
   const errorBox = document.getElementById('jsErrorMessage');
   const branchListOptions = Array.from(document.querySelectorAll('#branchList option')).map(opt => opt.value.trim().toLowerCase());
-
-  function isExistingBranch(name) {
-    return branchListOptions.includes(name.trim().toLowerCase());
-  }
 
   openEmpBtn.addEventListener('click', (e) => {
     e.preventDefault();
@@ -181,6 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const branchForm = document.getElementById('branchForm');
   const branchList = document.getElementById('branchList');
   const branchNameInput = document.getElementById('branchName');
+  const newBranchLocationInput = document.getElementById('newBranchLocation');
   const errorBox = document.getElementById('branchModalError');
 
   branchBtn.addEventListener('click', () => {
@@ -222,6 +228,9 @@ document.addEventListener('DOMContentLoaded', () => {
         branchList.appendChild(option);
         branchNameInput.value = data.name;
 
+        // ✅ Inject location into hidden field for backend use
+        newBranchLocationInput.value = location;
+
         branchModal.classList.add('hidden');
         branchModal.style.display = 'none';
         branchForm.reset();
@@ -233,23 +242,4 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
-
-{% if messages %}
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  const modal = document.getElementById('messageModal');
-  const msgText = document.getElementById('modalMessageText');
-  const closeBtn = document.getElementById('closeMessageModalBtn');
-
-  msgText.innerText = "{{ messages.0|escapejs }}";
-  modal.classList.remove('hidden');
-  modal.style.display = 'flex';
-
-  closeBtn.addEventListener('click', function () {
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-  });
-});
-</script>
-{% endif %}
 {% endblock %}
