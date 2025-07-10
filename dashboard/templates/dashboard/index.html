@@ -1,0 +1,155 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}UNIQUE - Dashboard{% endblock %}
+
+{% block content %}
+<main>
+    <h1>Dashboard</h1>
+
+    <div class="date">
+        <form method="get" id="dateForm">
+            <input type="date" name="date" value="{{ today|date:'Y-m-d' }}" onchange="document.getElementById('dateForm').submit();">
+        </form>
+    </div>
+
+    {% if branches %}
+<form class="date" method="get" id="filterForm">
+  <select name="branch" onchange="document.getElementById('filterForm').submit();">
+    <option value="">All Branches</option>
+    {% for b in branches %}
+      <option value="{{ b.id }}" {% if branch and branch.id == b.id %}selected{% endif %}>{{ b.name }}</option>
+    {% endfor %}
+  </select>
+</form>
+{% endif %}
+
+
+    <div class="insights">
+        <!-- SALES CARD -->
+        <div class="sales">
+            <span class="material-symbols-sharp">analytics</span>
+            <div class="middle">
+                <div class="left">
+                    <h3>Sales on Selected Date</h3>
+                    <h1>₹{{ total_sales|floatformat:2 }}</h1>
+                </div>
+                <div class="progress">
+                    <svg width="80" height="80">
+                        <circle cx="40" cy="40" r="36" stroke="var(--color-light)" stroke-width="8" fill="none" />
+                        <circle
+                            cx="40"
+                            cy="40"
+                            r="36"
+                            stroke="var(--color-primary)"
+                            stroke-width="8"
+                            fill="none"
+                            stroke-dasharray="226.2"
+                            stroke-dashoffset="{{ sales_progress|floatformat:2 }}"
+                            stroke-linecap="round"
+                        />
+                    </svg>
+                    <div class="number">
+                        <p>{{ sales_percent|floatformat:0 }}%</p>
+                    </div>
+                </div>
+            </div>
+            <small class="text-muted">Selected Date</small>
+        </div>
+
+        <!-- EXPENSES CARD -->
+        <div class="expenses">
+            <span class="material-symbols-sharp">bar_chart</span>
+            <div class="middle">
+                <div class="left">
+                    <h3>Expenses on Selected Date</h3>
+                    <h1>₹{{ total_expenses|floatformat:2 }}</h1>
+                </div>
+                <div class="progress">
+                    <svg width="80" height="80">
+                        <circle cx="40" cy="40" r="36" stroke="var(--color-light)" stroke-width="8" fill="none" />
+                        <circle
+                            cx="40"
+                            cy="40"
+                            r="36"
+                            stroke="var(--color-danger)"
+                            stroke-width="8"
+                            fill="none"
+                            stroke-dasharray="226.2"
+                            stroke-dashoffset="{{ expense_progress|floatformat:2 }}"
+                            stroke-linecap="round"
+                        />
+                    </svg>
+                    <div class="number">
+                        <p>{{ expense_percent|floatformat:0 }}%</p>
+                    </div>
+                </div>
+            </div>
+            <small class="text-muted">Selected Date</small>
+        </div>
+
+        <!-- INCOME CARD -->
+        <div class="income">
+            <span class="material-symbols-sharp">stacked_line_chart</span>
+            <div class="middle">
+                <div class="left">
+                    <h3>Monthly Income</h3>
+                    <h1>₹{{ total_income|floatformat:2 }}</h1>
+                </div>
+                <div class="progress">
+                    <svg width="80" height="80">
+                        <circle cx="40" cy="40" r="36" stroke="var(--color-light)" stroke-width="8" fill="none" />
+                        <circle
+                            cx="40"
+                            cy="40"
+                            r="36"
+                            stroke="var(--color-success)"
+                            stroke-width="8"
+                            fill="none"
+                            stroke-dasharray="226.2"
+                            stroke-dashoffset="{{ income_progress|floatformat:2 }}"
+                            stroke-linecap="round"
+                        />
+                    </svg>
+                    <div class="number">
+                        <p>{{ income_percent|floatformat:0 }}%</p>
+                    </div>
+                </div>
+            </div>
+            <small class="text-muted">Month of {{ today|date:"F Y" }}</small>
+        </div>
+    </div>
+
+    <!-- RECENT ORDERS -->
+    <div class="recent-orders">
+        <h2>Orders on {{ today|date:"M d, Y" }}</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Client's Name</th>
+                    <th>Product Name</th>
+                    <th>Payment</th>
+                    <th>Staff</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sale in recent_sales %}
+                <tr>
+                    <td class="success">{{ sale.customer.name }}</td>
+                    <td>{{ sale.items.first.product.name }}</td>
+                    <td>{{ sale.payment_status }}</td>
+                    <td class="warning">{{ sale.staff.username }}</td>
+                    <td class="primary"><a href="#">Details</a></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">No orders for this date.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <a href="{% url 'orders' %}">Show All</a>
+    </div>
+</main>
+{% endblock %}

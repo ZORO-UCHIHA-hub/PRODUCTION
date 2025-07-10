@@ -1,0 +1,100 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}UNIQUE Admin{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'dashboard/css/style.css' %}">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Sharp"/>
+</head>
+
+<body>
+  <div class="container">
+  {% include 'dashboard/sidebar.html' %}
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+          <div class="right">
+            <div class="top">
+                <button id="menu-btn">
+                    <span class="material-symbols-sharp">menu</span>
+                </button>
+                <div class="theme-toggler">
+                    <span class="material-symbols-sharp active">light_mode</span>
+                    <span class="material-symbols-sharp">dark_mode</span>
+                </div>
+<div class="profile">
+    <div class="info">
+        <p>Hey, <b>{{ request.user.first_name|default:request.user.username }}</b></p>
+        <small class="text-muted">{{ request.user.profile.role|title }}</small>
+    </div>
+    <div class="profile-photo">
+        <img src="{% static 'dashboard/images/profile-1.jpg' %}" alt="">
+    </div>
+</div>
+
+            </div>
+
+<div class="recent-updates">
+    <h2>Recent Updates</h2>
+    <div class="updates">
+{% for update in recent_updates %}
+<div class="update">
+    <div class="profile-photo">
+        <img src="{% static 'dashboard/images/profile-2.jpg' %}" alt="">
+    </div>
+    <div class="message">
+        {% if update.type == "sale" %}
+            <p><b>{{ update.name }}</b> made a purchase.</p>
+        {% elif update.type == "customer" %}
+            <p><b>{{ update.name }}</b> registered as a new customer.</p>
+        {% endif %}
+        <small class="text-muted">{{ update.datetime|date:"M d, H:i A" }}</small>
+    </div>
+</div>
+{% endfor %}
+
+    </div>
+</div>
+
+
+<div class="sales-analytics">
+    <h2>Sales Analytics</h2>
+    {% for data in sales_analytics %}
+    <div class="item branch-{{ forloop.counter }}">
+        <div class="icon">
+            <span class="material-symbols-sharp">timer_{{ forloop.counter }}</span>
+        </div>
+        <div class="right">
+            <div class="info">
+                <h3>{{ data.branch }}</h3>
+                <small class="text-muted">Last 24 Hours</small>
+            </div>
+            <h5 class="{{ data.trend }}">{{ data.growth }}</h5>
+            <h3>₹{{ data.amount|floatformat:2 }}</h3>
+        </div>
+    </div>
+    {% endfor %}
+
+    <a href="{% url 'products' %}">
+        <div class="item add-product">
+            <div>
+                <span class="material-symbols-sharp">add</span>
+                <h3>Add Products</h3>
+            </div>
+        </div>
+    </a>
+</div>
+
+
+        </div>
+  </div>
+
+  {% block scripts %}{% endblock %}
+
+  <script src="{% static 'dashboard/js/index.js' %}"></script>
+</body>
+</html>

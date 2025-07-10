@@ -1,0 +1,87 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Receipt #{{ sale.id }}{% endblock %}
+
+{% block content %}
+<main class="receipt">
+  <h1 style="text-align:center;">🧾 UNIQUE STORE</h1>
+  <p style="text-align:center; margin-bottom: 1rem;">
+    <strong>{{ sale.branch.name }}</strong> — {{ sale.branch.location }}
+  </p>
+
+  <section class="meta">
+    <p><strong>Customer:</strong> {{ sale.customer.name }} ({{ sale.customer.phone }})</p>
+    <p><strong>GST No:</strong> {{ sale.gst_number|default:"—" }}</p>
+    <p><strong>Date:</strong> {{ sale.date|date:"Y-m-d H:i" }}</p>
+    <p><strong>Printed On:</strong> {{ printed_on|date:"Y-m-d H:i" }}</p>
+  </section>
+
+  <table class="receipt-table" style="width: 100%; margin-top: 1rem;">
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Qty</th>
+        <th>Base Price</th>
+        <th>GST%</th>
+        <th>GST ₹</th>
+        <th>Total ₹</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td>{{ item.product.name }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>₹{{ item.price|floatformat:2 }}</td>
+        <td>{{ item.gst_percent }}%</td>
+        <td>₹{{ item.total_gst|floatformat:2 }}</td>
+        <td>₹{{ item.total|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <hr style="margin: 1rem 0;">
+
+  <div style="text-align: right; font-size: 1rem;">
+    <p><strong>Subtotal:</strong> ₹{{ subtotal|floatformat:2 }}</p>
+    <p><strong>GST Total:</strong> ₹{{ gst_total|floatformat:2 }}</p>
+    <p style="font-size: 1.1rem;"><strong>Grand Total:</strong> ₹{{ total|floatformat:2 }}</p>
+    <p><strong>Paid:</strong> ₹{{ sale.amount_paid|floatformat:2 }}</p>
+  </div>
+
+  {% if sale.memo_pdf %}
+    <div style="margin-top: 1rem;">
+      <a href="{{ sale.memo_pdf.url }}" class="btn" target="_blank">📄 Download PDF</a>
+    </div>
+  {% endif %}
+
+  {% if original or history %}
+  <hr>
+  <section>
+    <h2>📝 Order History</h2>
+
+    {% if original %}
+    <div style="margin-bottom: 1rem;">
+      <p><strong>Original Order:</strong> {{ original.date|date:"Y-m-d H:i" }}</p>
+      <p>Paid: ₹{{ original.amount_paid|floatformat:2 }}</p>
+      <a href="{% url 'print_receipt' original.id %}" target="_blank">View Original Receipt</a>
+    </div>
+    {% endif %}
+
+    {% if history %}
+    <div>
+      <p><strong>Edits:</strong></p>
+      <ul>
+        {% for edit in history %}
+        <li>
+          {{ forloop.counter }}. {{ edit.date|date:"Y-m-d H:i" }} — Paid: ₹{{ edit.amount_paid|floatformat:2 }}
+          <a href="{% url 'print_receipt' edit.id %}" target="_blank">View</a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+</main>
+{% endblock %}

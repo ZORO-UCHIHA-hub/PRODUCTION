@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Receipt #{{ sale.id }}</title>
+  <style>
+    body { font-family: monospace; font-size: 12px; padding: 10px; }
+    .receipt-line { margin-bottom: 8px; }
+    .center { text-align: center; }
+    hr { border: none; border-top: 1px dashed #333; margin: 10px 0; }
+  </style>
+</head>
+<body onload="window.print(); window.close();">
+  <div class="center">
+    <h2>🧾 UNIQUE STORE</h2>
+    <p>{{ sale.branch.name }}<br>{{ sale.branch.location }}</p>
+    <hr>
+    <p>Customer: {{ sale.customer.name }}</p>
+    <p>Phone: {{ sale.customer.phone }}</p>
+    <hr>
+  </div>
+
+  {% for item in items %}
+    <div class="receipt-line">
+      {{ item.product.name }} x{{ item.quantity }}  
+      ₹{{ item.price|floatformat:2 }}  
+    </div>
+  {% endfor %}
+
+  <hr>
+  <p>Subtotal: ₹{{ subtotal|floatformat:2 }}</p>
+  <p>GST Total: ₹{{ gst_total|floatformat:2 }}</p>
+  <strong>Total: ₹{{ total|floatformat:2 }}</strong><br>
+  Paid: ₹{{ sale.amount_paid|floatformat:2 }}
+  <hr>
+  <div class="center">
+    <p>{{ sale.date|date:"d M Y, H:i" }}</p>
+    <p>Thank you for shopping!</p>
+  </div>
+</body>
+</html>

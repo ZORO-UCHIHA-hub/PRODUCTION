@@ -1,0 +1,416 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}UNIQUE - Orders{% endblock %}
+
+{% block content %}
+<!-- JSON Data for Customers and Products -->
+{{ customers|json_script:"customer_json" }}
+{{ products|json_script:"products_json" }}
+
+<script>
+  const CUSTOMERS = JSON.parse(document.getElementById('customer_json').textContent);
+
+  // Dynamically populate the customer dropdown
+  const select = document.getElementById("modalCustomerSelect");
+  CUSTOMERS.forEach(cust => {
+    const option = document.createElement("option");
+    option.value = cust.id;
+    option.textContent = cust.name;
+    option.dataset.phone = cust.phone;
+    option.dataset.gst = cust.gst || '';  // ✅ FIXED this line
+    select.appendChild(option);
+  });
+
+  const branchId = document.getElementById("branchSelect").value;
+
+fetch('/orders/new/', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-CSRFToken': getCSRFToken()
+  },
+  body: JSON.stringify({
+    branch_id: branchId,
+    customer_id,
+    customer_name,
+    customer_phone,
+    customer_gst,
+    total,
+    paid,
+    gst_input,
+    items
+  })
+});
+
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const PRODUCTS_JSON = document.getElementById("products_json");
+  if (!PRODUCTS_JSON) {
+    console.error("❌ products_json element not found");
+    return;
+  }
+
+  const PRODUCTS = JSON.parse(PRODUCTS_JSON.textContent);
+
+  // ✅ Add item row
+  window.addItemRow = function () {
+    const itemList = document.getElementById("itemList");
+    if (!itemList) {
+      console.error("❌ itemList element not found");
+      return;
+    }
+
+    const row = document.createElement("div");
+    row.className = "item-row";
+    row.style.display = "flex";
+    row.style.gap = "1rem";
+    row.style.marginBottom = "1rem";
+
+    // Product dropdown
+    const productSelect = document.createElement("select");
+    productSelect.className = "product-select";
+    productSelect.required = true;
+    productSelect.style.flex = "2";
+
+    PRODUCTS.forEach(prod => {
+      const opt = document.createElement("option");
+      opt.value = prod.id;
+      const gstPrice = (prod.price * (1 + prod.gst_percent / 100)).toFixed(2);
+      opt.textContent = `${prod.name} (₹${gstPrice})`; // GST-inclusive
+      opt.dataset.price = gstPrice;                    // Set for calculations
+      productSelect.appendChild(opt);
+    });
+
+    // Quantity input
+    const qtyInput = document.createElement("input");
+    qtyInput.type = "number";
+    qtyInput.min = 1;
+    qtyInput.value = 1;
+    qtyInput.className = "qty-input";
+    qtyInput.style.flex = "1";
+
+    // Price display
+    const priceDisplay = document.createElement("span");
+    priceDisplay.className = "price-display";
+    priceDisplay.style.flex = "1";
+    priceDisplay.textContent = `₹${PRODUCTS[0].price}`;
+
+    // Remove button
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.textContent = "✖";
+    removeBtn.onclick = () => {
+      row.remove();
+      updateTotal();
+    };
+
+    // Event listeners
+    productSelect.addEventListener("change", () => {
+      const selected = productSelect.selectedOptions[0];
+      priceDisplay.textContent = `₹${selected.dataset.price}`;
+      updateTotal();
+      syncLatestRow(); // Reflect change in synced fields
+    });
+
+    qtyInput.addEventListener("input", () => {
+      updateTotal();
+      syncLatestRow(); // Reflect change in synced fields
+    });
+
+    // Append to row
+    row.appendChild(productSelect);
+    row.appendChild(qtyInput);
+    row.appendChild(priceDisplay);
+    row.appendChild(removeBtn);
+
+    // Add to DOM
+    itemList.appendChild(row);
+
+    updateTotal();
+    syncLatestRow(); // Sync synced fields after adding
+  };
+
+  // ✅ Sync latest row with Item Price and No. of Items inputs
+function syncLatestRow() {
+  const rows = document.querySelectorAll(".item-row");
+  if (!rows.length) return;
+
+  const lastRow = rows[rows.length - 1];
+  const qtyInput = lastRow.querySelector(".qty-input");
+  const select = lastRow.querySelector(".product-select");
+
+  const selectedPrice = parseFloat(select.selectedOptions[0].dataset.price || 0);
+  const quantity = parseInt(qtyInput.value || "1");
+
+  const itemTotal = selectedPrice * quantity;
+
+  // Set synced input fields
+  document.getElementById("itemPrice").value = selectedPrice.toFixed(2);
+  document.getElementById("itemQty").value = quantity;
+  document.getElementById("totalAmount").value = itemTotal.toFixed(2); // ✅ single row total
+
+  // Reflect changes made to synced inputs back to the row
+  document.getElementById("itemQty").oninput = () => {
+    qtyInput.value = document.getElementById("itemQty").value;
+    updateTotal();
+  };
+}
+
+window.updateTotal = function () {
+  const rows = document.querySelectorAll(".item-row");
+  let grandTotal = 0;       // base price
+  let gstInclusiveTotal = 0;
+
+  rows.forEach(row => {
+    const select = row.querySelector(".product-select");
+    const qty = parseInt(row.querySelector(".qty-input").value) || 0;
+
+    const basePrice = parseFloat(PRODUCTS.find(p => p.id == select.value).price);
+    const gstPercent = parseFloat(PRODUCTS.find(p => p.id == select.value).gst_percent);
+    const totalBase = basePrice * qty;
+    const totalWithGST = totalBase * (1 + gstPercent / 100);
+
+    grandTotal += totalBase;
+    gstInclusiveTotal += totalWithGST;
+  });
+
+  document.getElementById("grandTotal").value = grandTotal.toFixed(2);
+  document.getElementById("totalWithGST").value = gstInclusiveTotal.toFixed(2);
+
+  syncLatestRow();
+};
+
+
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  {% if editing %}
+    // Prefill customer section
+    const sale = {{ sale|safe }};
+    const items = {{ sale_items_json|safe }};
+
+    // Prefill customer info (without opening modal)
+    document.getElementById("customerPhone").value = sale.customer.phone;
+    document.getElementById("customerGST").value = sale.customer.gst_number || 'N/A';
+    document.getElementById("customer_id").value = sale.customer.id;
+    document.getElementById("gst_number").value = sale.gst_number || '';
+    document.getElementById("customerPhone").dataset.customerId = sale.customer.id;
+    document.getElementById("custName").textContent = sale.customer.name;
+    document.getElementById("custPhone").textContent = sale.customer.phone;
+    document.getElementById("custGST").textContent = sale.customer.gst_number || '—';
+
+    // Prefill branch if admin
+    const branchSelect = document.getElementById("branchSelect");
+    if (branchSelect && sale.branch.id) {
+      branchSelect.value = sale.branch.id;
+    }
+
+    // Prefill amount paid
+    document.getElementById("amountPaid").value = sale.amount_paid;
+
+    // Add sale items
+    items.forEach(item => {
+      addItemRow();
+      const rows = document.querySelectorAll(".item-row");
+      const row = rows[rows.length - 1];
+
+      const productSelect = row.querySelector(".product-select");
+      productSelect.value = item.product.id;
+      productSelect.dispatchEvent(new Event("change"));
+
+      const qtyInput = row.querySelector(".qty-input");
+      qtyInput.value = item.quantity;
+    });
+
+    updateTotal();
+  {% endif %}
+});
+</script>
+
+
+
+<main>
+  <h1>Orders</h1>
+
+  <form class="order-form" method="POST" id="orderForm">
+    {% csrf_token %}
+
+    <!-- Hidden Fields -->
+    <input type="hidden" name="customer_id" id="customer_id">
+    <input type="hidden" name="gst_number" id="gst_number" value="{{ profile.gst_number|default:'' }}">
+    <input type="hidden" name="items_json" id="items_json">
+    <input type="hidden" name="total_amount" id="hiddenTotal">
+    <input type="hidden" name="amount_paid" id="hiddenPaid">
+
+    <!-- Customer Info -->
+    <div class="form-group">
+      <label for="customerPhone">Phone</label>
+      <input type="text" id="customerPhone" value="N/A" readonly style="cursor: pointer;" title="Click to change customer" data-customer-id="">
+    </div>
+
+    <div class="form-group">
+      <label for="customerGST">GST No.</label>
+      <input type="text" id="customerGST" readonly value="N/A">
+    </div>
+    {% if editing %}
+      <input type="hidden" id="editing-sale-id" value="{{ sale.id }}">
+    {% endif %}
+
+    <!-- Branch (Admin Only) -->
+    {% if profile.role == 'admin' %}
+      <div class="form-group">
+        <label for="branchSelect">Select Branch</label>
+        <select id="branchSelect" required>
+          {% for b in branches %}
+            <option value="{{ b.id }}">{{ b.name }} - {{ b.location }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    {% else %}
+      <input type="hidden" id="branchSelect" value="{{ branch_id }}">
+    {% endif %}
+
+    <!-- Item List -->
+    <div class="form-group" style="grid-column: span 2;">
+      <label>Items</label>
+      <div id="itemList"></div>
+      <button class="btn" type="button" onclick="addItemRow()" style="margin-top: 1rem;">+ Add Item</button>
+    </div>
+
+    <!-- Price Inputs -->
+    <div class="form-group">
+      <label for="itemPrice">Item Price (₹)</label>
+      <input type="number" id="itemPrice" value="0" readonly>
+    </div>
+
+    <div class="form-group">
+      <label for="itemQty">No. of Items</label>
+      <input type="number" id="itemQty" min="1" value="1" required>
+    </div>
+
+    <div class="form-group">
+      <label for="totalAmount">Total Amount</label>
+      <input type="number" id="totalAmount" readonly value="0">
+    </div>
+
+    <div class="form-group">
+      <label for="grandTotal">Grand Total</label>
+      <input type="number" id="grandTotal" readonly value="0">
+    </div>
+
+    <div class="form-group">
+  <label for="totalWithGST">Total (Incl. GST)</label>
+  <input type="number" id="totalWithGST" readonly value="0">
+</div>
+
+
+    <div class="form-group">
+      <label for="amountPaid">Amount Paid</label>
+      <input type="number" id="amountPaid" required>
+    </div>
+
+    <button type="submit" class="btn">Place Order</button>
+    <button type="button" class="btn" onclick="showReceipt()">View Receipt</button>
+  </form>
+
+  <!-- Selected Customer Info -->
+  <div class="customer-info" id="selectedCustomerBox">
+    <h3>Customer Details</h3>
+    <p><strong>Name:</strong> <span id="custName">—</span></p>
+    <p><strong>Phone:</strong> <span id="custPhone">—</span></p>
+    <p><strong>GST No:</strong> <span id="custGST">—</span></p>
+  </div>
+</main>
+
+<!-- Customer Modal -->
+<div class="modal-overlay" id="customerModal">
+  <div class="customer-modal">
+    <h3>Select a Customer</h3>
+    <button class="add-customer-btn" type="button">+ Add Customer</button>
+    <select id="modalCustomerSelect" onchange="showCustomerDetails(this)"></select>
+    <div class="customer-details">
+      <p><strong>Phone:</strong> <span id="modalPhone">—</span></p>
+      <p><strong>GST No:</strong> <span id="modalGST">—</span></p>
+    </div>
+    <div class="modal-buttons">
+      <button onclick="closeCustomerModal()">Cancel</button>
+      <button class="proceed-btn" onclick="proceedToOrder()">Proceed</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Customer Modal -->
+<div class="modal-overlay" id="addCustomerModal" style="display: none;">
+  <div class="customer-modal">
+    <h3>Add New Customer</h3>
+    <input type="hidden" id="branchId" value="{{ branch_id }}">
+    <div class="form-group">
+      <label for="newCustomerName">Name</label>
+      <input type="text" id="newCustomerName" required>
+    </div>
+    <div class="form-group">
+      <label for="newCustomerPhone">Phone</label>
+      <input type="text" id="newCustomerPhone" required>
+    </div>
+    <div class="form-group">
+      <label for="newCustomerGST">GST Number</label>
+      <input type="text" id="newCustomerGST">
+    </div>
+    <div class="modal-buttons">
+      <button onclick="closeAddCustomerModal()">Cancel</button>
+      <button onclick="saveNewCustomer()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Receipt Modal -->
+<div class="modal-overlay" id="receiptModal">
+<div class="customer-modal" style="max-width: 600px; background: #fdfdfd;">
+  <div style="text-align: center; margin-bottom: 1rem;">
+    <img src="{% static 'images/logo.png' %}" alt="UNIQUE Store Logo" style="height: 60px; margin-bottom: 0.5rem;">
+    <h3 style="margin: 0;">🧾 UNIQUE STORE</h3>
+    <p style="margin: 0; font-size: 0.9rem;">123 Main Street, Kolkata - 700001<br>Phone: +91-9876543210</p>
+  </div>
+
+  <div style="font-size: 0.95rem; line-height: 1.6;">
+    <p><strong>Date:</strong> <span id="rDate">—</span></p>
+    <p><strong>Customer:</strong> <span id="rName">—</span></p>
+    <p><strong>Phone:</strong> <span id="rPhone">—</span></p>
+    <p><strong>GST No:</strong> <span id="rGST">—</span></p>
+<p><strong>GST Details:</strong> GST included item-wise below.</p>
+<hr>
+<div id="rItems" style="margin-bottom: 1rem;"></div>
+<hr>
+<p><strong>Subtotal (Excl. GST):</strong> ₹<span id="rSubTotal">0.00</span></p>
+<p><strong>Total GST:</strong> ₹<span id="rGSTAmount">0.00</span></p>
+<p><strong>Total (Incl. GST):</strong> ₹<span id="rGrand">0.00</span></p>
+<p><strong>Paid:</strong> ₹<span id="rPaid">0.00</span></p>
+  </div>
+
+  <div class="modal-buttons">
+    <button onclick="closeReceiptModal()">Close</button>
+    <button onclick="printReceipt()">🖨️ Print Receipt</button>
+  </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <!-- Inject PRODUCTS before any dependent script loads -->
+  <script>
+    const PRODUCTS = JSON.parse(document.getElementById("products_json").textContent);
+  </script>
+
+  <!-- Now load scripts that depend on PRODUCTS -->
+  <script src="{% static 'dashboard/js/customer.js' %}" defer></script>
+  <script src="{% static 'dashboard/js/customer-modal.js' %}" defer></script>
+  <script src="{% static 'dashboard/js/order-form.js' %}" defer></script>
+  <script src="{% static 'dashboard/js/receipt-modal.js' %}" defer></script>
+{% endblock %}
+

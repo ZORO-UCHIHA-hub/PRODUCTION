@@ -1,0 +1,255 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Employees{% endblock %}
+
+{% block content %}
+<main>
+  <h1>Employees</h1>
+
+  <div class="insights">
+    <div class="card">
+      <span class="material-symbols-sharp">group</span>
+      <div>
+        <h3>Total Employees</h3>
+        <h1>{{ employees|length }}</h1>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-area">
+    <h2>Employee List</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Role</th>
+          <th>Branch</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for emp in employees %}
+        <tr>
+          <td>{{ emp.user.first_name }}</td>
+          <td>{{ emp.role|title }}</td>
+          <td>{{ emp.branch.name }}</td>
+          <td class="success">Active</td>
+          <td class="actions">
+            <!-- <a href="#" class="action-btn"><span class="material-symbols-sharp">edit</span></a> -->
+            {% if emp.user.id %}
+  <a href="{% url 'delete_employee' emp.user.id %}">
+    <span class="material-symbols-sharp">delete</span>
+  </a>
+{% else %}
+  <span class="text-muted">N/A</span>
+{% endif %}
+
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5">No employees found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="item add add-employee">
+      <a href="#" id="openEmployeeModal">
+        <div>
+          <span class="material-symbols-sharp">add</span>
+          <h3>Add Employee</h3>
+        </div>
+      </a>
+    </div>
+  </div>
+</main>
+
+<!-- Add Employee Modal -->
+<div id="employeeModal" class="modal hidden">
+  <div class="modal-content">
+    <span class="close-modal" id="closeEmployeeModal">&times;</span>
+    <h2>Add New Employee</h2>
+
+    <form id="employeeForm" method="POST" action="{% url 'employees' %}">
+      {% csrf_token %}
+
+      <label for="empName">Name</label>
+      <input type="text" id="empName" name="empName" required>
+
+      <label for="empPhone">Phone Number</label>
+      <input type="tel" id="empPhone" name="empPhone" required pattern="[0-9]{10}" placeholder="10-digit number">
+
+      <label for="empPassword">Password</label>
+      <input type="password" id="empPassword" name="empPassword" placeholder="Leave blank to auto-generate">
+
+      <label for="empGST">GST Number</label>
+      <input type="text" id="empGST" name="empGST" placeholder="Optional">
+
+      <input type="hidden" name="empRole" value="manager">
+
+      <label for="branchName">Branch Name</label>
+      <input list="branchList" id="branchName" name="branchName" required placeholder="Type or select a branch" />
+      <datalist id="branchList">
+        {% for branch in branches %}
+          <option value="{{ branch.name }}"></option>
+        {% endfor %}
+      </datalist>
+      <button type="button" id="openBranchModal" class="btn-small">+ Create Branch</button>
+
+      <p id="jsErrorMessage" style="color: red; display: none; margin-top: 10px;"></p>
+
+      <button type="submit" class="btn">Add Employee</button>
+    </form>
+  </div>
+</div>
+
+<!-- Create Branch Modal -->
+<div id="branchModal" class="modal hidden">
+  <div class="modal-content">
+    <span class="close-modal" id="closeBranchModal">&times;</span>
+    <h2>Create New Branch</h2>
+    <form id="branchForm">
+      <label for="branchModalName">Branch Name</label>
+      <input type="text" id="branchModalName" name="name" required>
+
+      <label for="branchModalLocation">Location</label>
+      <input type="text" id="branchModalLocation" name="location" required>
+
+      <p id="branchModalError" style="color: red; display: none;"></p>
+      <button type="submit" class="btn">Create Branch</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const openEmpBtn = document.getElementById('openEmployeeModal');
+  const employeeModal = document.getElementById('employeeModal');
+  const closeEmpBtn = document.getElementById('closeEmployeeModal');
+  const form = document.getElementById('employeeForm');
+  const branchInput = document.getElementById('branchName');
+  const errorBox = document.getElementById('jsErrorMessage');
+  const branchListOptions = Array.from(document.querySelectorAll('#branchList option')).map(opt => opt.value.trim().toLowerCase());
+
+  function isExistingBranch(name) {
+    return branchListOptions.includes(name.trim().toLowerCase());
+  }
+
+  openEmpBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    employeeModal.classList.remove('hidden');
+    employeeModal.style.display = 'flex';
+  });
+
+  closeEmpBtn.addEventListener('click', () => {
+    employeeModal.classList.add('hidden');
+    employeeModal.style.display = 'none';
+    form.reset();
+    errorBox.style.display = "none";
+  });
+
+  window.addEventListener('click', (e) => {
+    if (e.target === employeeModal) {
+      employeeModal.classList.add('hidden');
+      employeeModal.style.display = 'none';
+      form.reset();
+      errorBox.style.display = "none";
+    }
+  });
+
+  form.addEventListener('submit', (e) => {
+    const branch = branchInput.value.trim();
+    if (!branch) {
+      e.preventDefault();
+      errorBox.innerText = "Please enter a branch name.";
+      errorBox.style.display = "block";
+    }
+  });
+
+  branchInput.addEventListener('input', () => errorBox.style.display = "none");
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const branchBtn = document.getElementById('openBranchModal');
+  const branchModal = document.getElementById('branchModal');
+  const closeBranchBtn = document.getElementById('closeBranchModal');
+  const branchForm = document.getElementById('branchForm');
+  const branchList = document.getElementById('branchList');
+  const branchNameInput = document.getElementById('branchName');
+  const errorBox = document.getElementById('branchModalError');
+
+  branchBtn.addEventListener('click', () => {
+    branchModal.classList.remove('hidden');
+    branchModal.style.display = 'flex';
+  });
+
+  closeBranchBtn.addEventListener('click', () => {
+    branchModal.classList.add('hidden');
+    branchModal.style.display = 'none';
+    branchForm.reset();
+    errorBox.style.display = "none";
+  });
+
+  branchForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('branchModalName').value.trim();
+    const location = document.getElementById('branchModalLocation').value.trim();
+
+    if (!name || !location) {
+      errorBox.innerText = "All fields are required.";
+      errorBox.style.display = "block";
+      return;
+    }
+
+    fetch("{% url 'create_branch_ajax' %}", {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name, location })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        const option = document.createElement('option');
+        option.value = data.name;
+        branchList.appendChild(option);
+        branchNameInput.value = data.name;
+
+        branchModal.classList.add('hidden');
+        branchModal.style.display = 'none';
+        branchForm.reset();
+      } else {
+        errorBox.innerText = data.error || "Error adding branch.";
+        errorBox.style.display = "block";
+      }
+    });
+  });
+});
+</script>
+
+{% if messages %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('messageModal');
+  const msgText = document.getElementById('modalMessageText');
+  const closeBtn = document.getElementById('closeMessageModalBtn');
+
+  msgText.innerText = "{{ messages.0|escapejs }}";
+  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
+
+  closeBtn.addEventListener('click', function () {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  });
+});
+</script>
+{% endif %}
+{% endblock %}

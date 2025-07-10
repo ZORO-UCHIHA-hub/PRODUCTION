@@ -1,0 +1,46 @@
+<table>
+  <thead>
+    <tr>
+      <th>Customer</th>
+      <th>Product(s)</th>
+      <th>Price</th>
+      {% if is_admin %}
+        <th>Branch</th>
+      {% endif %}
+      <th>Date</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for sale in orders %}
+    <tr>
+      <td>{{ sale.customer.name }}</td>
+      <td>
+        {% for item in sale.items.all %}
+          {{ item.product.name }}{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      </td>
+      <td>₹{{ sale.total_price }}</td>
+      {% if is_admin %}
+        <td>{{ sale.branch.name }}</td>
+      {% endif %}
+      <td>{{ sale.date|date:"Y-m-d" }}</td>
+      <td>
+        <div class="actions">
+          <a href="{% url 'print_receipt' sale.id %}" class="action-btn primary" title="Print">
+            <span class="material-symbols-sharp">print</span>
+          </a>
+          <a href="{% url 'edit_order_page' sale.id %}" class="action-btn warning" title="Edit">
+            <span class="material-symbols-sharp">edit</span>
+          </a>
+          <a href="{% url 'delete_order' sale.id %}" class="action-btn danger" title="Delete">
+            <span class="material-symbols-sharp">delete</span>
+          </a>
+        </div>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6">No orders found.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>

@@ -1,0 +1,107 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}UNIQUE - Expenses{% endblock %}
+
+{% block content %}
+<main>
+  <h1>Expenses</h1>
+
+  <div class="date">
+    <input type="date" id="filter-date" />
+  </div>
+
+  <div class="content-area">
+    <div class="search-bar">
+      <span class="material-symbols-sharp">search</span>
+      <input type="text" placeholder="Search expenses..." id="search-expense" />
+    </div>
+
+    <h2>Expense List</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Amount</th>
+          <th>Category</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="expense-table-body">
+        {% for expense in expenses %}
+        <tr>
+          <td>{{ expense.title|escape }}</td>
+          <td>₹{{ expense.amount|intcomma }}</td>
+          <td>{{ expense.category|escape }}</td>
+          <td>{{ expense.date }}</td>
+          <td>
+            <div class="actions">
+              <button class="action-btn warning" title="Edit"
+                onclick="openEditModal('{{ expense.title|escapejs }}', '{{ expense.amount }}', '{{ expense.category|escapejs }}', '{{ expense.date }}', '{{ expense.id }}')">
+                <span class="material-symbols-sharp">edit</span>
+              </button>
+              <button class="action-btn danger" title="Delete"
+                onclick="deleteExpense('{{ expense.id }}')">
+                <span class="material-symbols-sharp">delete</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5">No expenses found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="item add add-product">
+      <a href="#" onclick="openAddExpenseModal()">
+        <div>
+          <span class="material-symbols-sharp">add</span>
+          <h3>Add Expense</h3>
+        </div>
+      </a>
+    </div>
+  </div>
+</main>
+
+<!-- Add Expense Modal -->
+<div id="expense-modal" class="modal">
+  <div class="modal-content">
+    <span class="close-modal" onclick="closeAddExpenseModal()">&times;</span>
+    <h2>Add New Expense</h2>
+    <form id="add-expense-form" onsubmit="saveExpense(event)">
+      <input type="text" name="title" id="add-title" placeholder="Title" required />
+      <input type="number" name="amount" id="add-amount" placeholder="Amount" required />
+      <input type="text" name="category" id="add-category" placeholder="Category" required />
+      <input type="date" name="date" id="add-date" required />
+      <button class="btn" type="submit">Save Expense</button>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Expense Modal -->
+<div id="edit-expense-modal" class="modal">
+  <div class="modal-content">
+    <span class="close-modal" onclick="closeEditExpenseModal()">&times;</span>
+    <h2>Edit Expense</h2>
+    <form id="edit-expense-form" onsubmit="updateExpense(event)">
+      <input type="hidden" id="edit-id" />
+      <input type="text" id="edit-title" placeholder="Title" required />
+      <input type="number" id="edit-amount" placeholder="Amount" required />
+      <input type="text" id="edit-category" placeholder="Category" required />
+      <input type="date" id="edit-date" required />
+      <button class="btn" type="submit">Update Expense</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'dashboard/js/expense-modal.js' %}" defer></script>
+{% endblock %}
+

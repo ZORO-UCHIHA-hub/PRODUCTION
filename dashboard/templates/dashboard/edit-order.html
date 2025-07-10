@@ -1,0 +1,201 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Edit Order #{{ sale.id }}{% endblock %}
+
+{% block content %}
+<main class="main-content">
+  <h1>Edit Order #{{ sale.id }}</h1>
+
+  <form id="editOrderForm" class="order-form">
+    <input type="hidden" id="saleId" value="{{ sale.id }}">
+
+    <section class="grid-2">
+      <div class="form-group">
+        <label>Customer</label>
+        <input type="text" value="{{ sale.customer.name }} ({{ sale.customer.phone }})" readonly>
+      </div>
+      <div class="form-group">
+        <label>GST Number</label>
+        <input type="text" value="{{ sale.gst_number }}" readonly>
+      </div>
+    </section>
+
+    <section class="form-group">
+      <label>Order Items</label>
+      <div id="itemList">
+        {% for item in items %}
+        <div class="item-row" style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
+          <select class="product-select" style="flex: 2;">
+            {% for p in products %}
+              <option value="{{ p.id }}" {% if p.id == item.product_id %}selected{% endif %}>
+                {{ p.name }}
+              </option>
+            {% endfor %}
+          </select>
+
+          <input type="number" class="qty-input" value="{{ item.quantity }}" min="1" style="width: 60px;">
+          <span class="item-price">
+  ₹{{ item.price }} + ₹{{ item.price|floatformat:2|add:"0"|floatformat:2|floatformat:2 }} (GST)
+</span>
+
+
+          <button type="button" class="remove-item btn danger" onclick="this.parentElement.remove()">✖</button>
+        </div>
+        {% endfor %}
+      </div>
+      <button type="button" class="btn add" onclick="addRow()">+ Add Item</button>
+    </section>
+
+<section class="grid-3">
+  <div class="form-group">
+    <label>Amount Paid</label>
+    <input type="number" id="amountPaid" value="{{ sale.amount_paid }}" required>
+  </div>
+  <div class="form-group">
+    <label>Subtotal</label>
+    <input type="text" id="subtotalDisplay" readonly value="₹0">
+  </div>
+  <div class="form-group">
+    <label>GST Total</label>
+    <input type="text" id="gstDisplay" readonly value="₹0">
+  </div>
+  <div class="form-group" style="grid-column: span 3;">
+    <label>Grand Total</label>
+    <input type="text" id="grandTotalDisplay" readonly value="₹0" style="font-weight: bold;">
+  </div>
+</section>
+
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">💾 Update Order</button>
+      <a href="{% url 'orders' %}" class="btn">← Cancel</a>
+    </div>
+  </form>
+</main>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  calculateTotal();
+});
+
+document.getElementById('editOrderForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+
+  const saleId = document.getElementById('saleId').value;
+  const paid = document.getElementById('amountPaid').value;
+  const items = [];
+
+  document.querySelectorAll('.item-row').forEach(row => {
+    const productId = row.querySelector('.product-select').value;
+    const qty = row.querySelector('.qty-input').value;
+    items.push({ product_id: productId, quantity: qty });
+  });
+
+  const response = await fetch(`/orders/${saleId}/update/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCSRFToken()
+    },
+    body: JSON.stringify({ items, paid })
+  });
+
+  const result = await response.json();
+  if (result.sale_id) {
+    alert('✅ Order updated!');
+    window.location.href = '/orders/';
+  } else {
+    alert('❌ ' + result.error);
+  }
+});
+
+function getCSRFToken() {
+  const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+  return cookie ? decodeURIComponent(cookie.split('=')[1]) : '';
+}
+
+function addRow() {
+  const row = document.createElement('div');
+  row.className = 'item-row';
+  row.style.display = 'flex';
+  row.style.gap = '1rem';
+  row.style.marginBottom = '0.5rem';
+
+  const select = document.createElement('select');
+  select.className = 'product-select';
+  select.style.flex = '2';
+  {% for p in products %}
+  select.innerHTML += `<option value="{{ p.id }}">{{ p.name }}</option>`;
+  {% endfor %}
+  select.onchange = calculateTotal;
+
+  const qty = document.createElement('input');
+  qty.type = 'number';
+  qty.className = 'qty-input';
+  qty.value = 1;
+  qty.min = 1;
+  qty.style.width = '60px';
+  qty.oninput = calculateTotal;
+
+  const price = document.createElement('span');
+  price.className = 'item-price';
+  price.textContent = "₹0";
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.textContent = '✖';
+  removeBtn.className = 'remove-item btn danger';
+  removeBtn.onclick = () => {
+    row.remove();
+    calculateTotal();
+  };
+
+  row.appendChild(select);
+  row.appendChild(qty);
+  row.appendChild(price);
+  row.appendChild(removeBtn);
+
+  document.getElementById('itemList').appendChild(row);
+  calculateTotal();
+}
+
+function calculateTotal() {
+  console.log("Running calculateTotal");
+
+  const PRODUCTS = {
+    {% for p in products %}
+    "{{ p.id }}": { price: {{ p.price }}, gst: {{ p.gst_percent|default:"0" }} },
+    {% endfor %}
+  };
+
+  let subtotal = 0;
+  let gstTotal = 0;
+
+  document.querySelectorAll('.item-row').forEach(row => {
+    const productId = row.querySelector('.product-select').value;
+    const qtyInput = row.querySelector('.qty-input');
+    const qty = parseInt(qtyInput.value) || 0;
+
+    const product = PRODUCTS[productId];
+    if (!product) return;
+
+    const base = product.price * qty;
+    const gst = (product.price * product.gst / 100) * qty;
+
+    subtotal += base;
+    gstTotal += gst;
+
+    const totalWithGST = base + gst;
+    row.querySelector('.item-price').textContent = `₹${totalWithGST.toFixed(2)}`;
+  });
+
+  const grand = subtotal + gstTotal;
+  document.getElementById('subtotalDisplay').value = `₹${subtotal.toFixed(2)}`;
+  document.getElementById('gstDisplay').value = `₹${gstTotal.toFixed(2)}`;
+  document.getElementById('grandTotalDisplay').value = `₹${grand.toFixed(2)}`;
+}
+
+
+</script>
+{% endblock %}

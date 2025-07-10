@@ -1,0 +1,108 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}UNIQUE - Customers{% endblock %}
+
+{% block content %}
+<main>
+  <h1>Customers</h1>
+  <div class="insights">
+    <div class="card">
+      <span class="material-symbols-sharp">person</span>
+      <div>
+        <h3>Total Customers</h3>
+        <h1>{{ customers|length }}</h1>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-area">
+    <h2>Customer List</h2>
+
+    <div class="search-bar">
+      <input type="text" id="customerSearch" placeholder="Search Customers..." />
+      <span class="material-symbols-sharp">search</span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Phone</th>
+          <th>Credits</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+<tbody>
+  {% for customer in customers %}
+  <tr>
+    <td>{{ customer.name }}</td>
+    <td>{{ customer.phone }}</td>
+    <td class="success">₹ {{ customer.credit }}</td>
+    <td class="actions">
+      <a href="#" onclick="editCustomer('{{ customer.id }}', '{{ customer.name }}', '{{ customer.phone }}', '{{ customer.gst_number|default:'' }}')">
+  <span class="material-symbols-sharp">edit</span>
+</a>
+
+      <a href="#" onclick="deleteCustomer('{{ customer.id }}')">
+  <span class="material-symbols-sharp">delete</span>
+</a>
+
+    </td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="4">No customers found.</td>
+  </tr>
+  {% endfor %}
+</tbody>
+
+
+    </table>
+
+<div class="item add add-customer">
+  <a href="#" id="openCustomerBtn">
+    <div>
+      <span class="material-symbols-sharp">add</span>
+      <h3>Add Customer</h3>
+    </div>
+  </a>
+</div>
+
+  </div>
+</main>
+
+<!-- Add/Edit Customer Modal (reuse this for both) -->
+<!-- Add/Edit Customer Modal -->
+<div class="modal-overlay" id="addCustomerModal" style="display: none;">
+  <div class="customer-modal">
+    <h3>Add New Customer</h3>
+    <div class="form-group">
+      <label for="newCustomerName">Name</label>
+      <input type="text" id="newCustomerName" required>
+    </div>
+    <div class="form-group">
+      <label for="newCustomerPhone">Phone</label>
+      <input type="text" id="newCustomerPhone" required>
+    </div>
+    <div class="form-group">
+      <label for="newCustomerGST">GST Number</label>
+      <input type="text" id="newCustomerGST">
+    </div>
+    <div class="modal-buttons">
+      <button onclick="closeAddCustomerModal()">Cancel</button>
+      <button onclick="saveNewCustomer()">Save</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'dashboard/js/customer.js' %}" defer></script>
+<script src="{% static 'dashboard/js/customer-modal.js' %}" defer></script>
+{% endblock %}

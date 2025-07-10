@@ -1,0 +1,68 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}UNIQUE - Products{% endblock %}
+
+{% block content %}
+<main>
+  <h1>Products {% if branch %}for {{ branch.name }}{% else %}(All Branches){% endif %}</h1>
+  <div class="content-area">
+    <h2>Product List</h2>
+
+    <div class="search-bar">
+      <input type="text" id="productSearch" placeholder="Search Products..." />
+      <span class="material-symbols-sharp">search</span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+<<<<<<< HEAD
+          <th>Price</th>
+=======
+          <th>Base Price</th>
+          <th>GST</th>
+          <th>Price with GST</th>
+>>>>>>> 168772b (New)
+          <th>Branch</th>
+          <th>Stock</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="productTableBody">
+        {% for bp in branch_products %}
+          <tr>
+            <td>{{ bp.product.name }}</td>
+            <td>₹{{ bp.product.price }}</td>
+            <td>{{ bp.product.gst_percent }}%</td>
+            <td>₹{{ bp.product.price_with_gst|floatformat:2 }}</td>
+            <td>{{ bp.branch.name }}</td>
+            <td>{{ bp.stock }}</td>
+<td class="actions">
+  <a href="#"><span class="material-symbols-sharp">visibility</span></a>
+  <a href="{% url 'edit_product' bp.product.id %}">
+  <span class="material-symbols-sharp">edit</span>
+</a>
+
+  <a href="{% url 'delete_product' bp.product.id %}"><span class="material-symbols-sharp">delete</span></a>
+</td>
+
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">No products available.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="item add add-product">
+      <a href="{% url 'add_product' %}">
+        <div>
+          <span class="material-symbols-sharp">add</span>
+          <h3>Add Product</h3>
+        </div>
+      </a>
+    </div>
+  </div>
+</main>
+{% endblock %}

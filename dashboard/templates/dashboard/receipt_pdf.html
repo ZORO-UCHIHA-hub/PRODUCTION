@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: sans-serif; font-size: 12px; }
+    h2 { text-align: center; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    table, th, td { border: 1px solid #444; }
+    th, td { padding: 5px; text-align: left; }
+    .right { text-align: right; }
+    .summary td { border: none; }
+  </style>
+</head>
+<body>
+  <h2>{{ branch.name }}</h2>
+  <p style="text-align: center;">{{ branch.location }}</p>
+
+  <p><strong>Date:</strong> {{ sale.date|date:"Y-m-d H:i" }}</p>
+  <p><strong>Customer:</strong> {{ sale.customer.name }}</p>
+  <p><strong>Phone:</strong> {{ sale.customer.phone }}</p>
+  <p><strong>GST No:</strong> {{ sale.gst_number|default:"—" }}</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Qty</th>
+        <th>Base</th>
+        <th>GST%</th>
+        <th>GST ₹</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td>{{ item.product.name }}</td>
+        <td>{{ item.quantity }}</td>
+        <td class="right">₹{{ item.price }}</td>
+        <td class="right">{{ item.gst_percent }}%</td>
+        <td class="right">₹{{ item.total_gst }}</td>
+        <td class="right">₹{{ item.total }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table class="summary" style="margin-top: 10px;">
+    <tr><td class="right"><strong>Subtotal:</strong> ₹{{ subtotal }}</td></tr>
+    <tr><td class="right"><strong>GST Total:</strong> ₹{{ gst_total }}</td></tr>
+    <tr><td class="right"><strong>Grand Total:</strong> ₹{{ total }}</td></tr>
+    <tr><td class="right"><strong>Paid:</strong> ₹{{ sale.amount_paid }}</td></tr>
+  </table>
+</body>
+</html>

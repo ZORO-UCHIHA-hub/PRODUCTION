@@ -1,0 +1,78 @@
+{% load static %}
+
+<aside>
+  <div class="top">
+    <div class="logo">
+      <img src="{% static 'dashboard/images/logo.png' %}" alt="logo" />
+      <h2>UNIQUE <span class="danger">ADMIN</span></h2>
+    </div>
+    <div class="close" id="close-btn">
+      <span class="material-symbols-sharp">close</span>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+      <span class="material-symbols-sharp">dashboard</span>
+      <h3>Dashboard</h3>
+    </a>
+
+    {% if role == "admin" %}
+    <a href="{% url 'employees' %}" class="{% if request.resolver_match.url_name == 'employees' %}active{% endif %}">
+      <span class="material-symbols-sharp">manage_accounts</span>
+      <h3>Employee</h3>
+    </a>
+    {% endif %}
+
+    {% if role != "staff" %}
+    <a href="{% url 'customer' %}" class="{% if request.resolver_match.url_name == 'customer' %}active{% endif %}">
+      <span class="material-symbols-sharp">person</span>
+      <h3>Customer</h3>
+    </a>
+
+<div class="sidebar-item with-dropdown active-dropdown">
+  <div class="dropdown-header active">
+    <span class="material-symbols-sharp">storefront</span>
+    <h3 style="font-weight: 400;">Products</h3>
+    <span class="material-symbols-sharp dropdown-arrow">expand_more</span>
+  </div>
+  <div class="dropdown-links">
+    <a href="{% url 'products' %}?branch=all" class="{% if request.GET.branch == 'all' %}active{% endif %}">All Branches</a>
+    {% for branch in branches %}
+    <a href="{% url 'products' %}?branch={{ branch.id }}" class="{% if request.GET.branch == branch.id|stringformat:'s' %}active{% endif %}">{{ branch.name }}</a>
+    {% endfor %}
+  </div>
+</div>
+
+    <a href="{% url 'orders' %}" class="{% if request.resolver_match.url_name == 'orders' %}active{% endif %}">
+      <span class="material-symbols-sharp">receipt_long</span>
+      <h3>Order</h3>
+    </a>
+
+    <a href="{% url 'expense' %}" class="{% if request.resolver_match.url_name == 'expense' %}active{% endif %}">
+      <span class="material-symbols-sharp">payments</span>
+      <h3>Expense</h3>
+    </a>
+
+    <a href="{% url 'analytics' %}" class="{% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">
+      <span class="material-symbols-sharp">insights</span>
+      <h3>Analytic</h3>
+    </a>
+
+    <a href="{% url 'staff' %}" class="{% if request.resolver_match.url_name == 'staff' %}active{% endif %}">
+      <span class="material-symbols-sharp">group</span>
+      <h3>Staff</h3>
+    </a>
+
+    <a href="{% url 'settings' %}" class="{% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
+      <span class="material-symbols-sharp">settings</span>
+      <h3>Settings</h3>
+    </a>
+    {% endif %}
+
+    <a href="{% url 'logout' %}">
+      <span class="material-symbols-sharp">logout</span>
+      <h3>Logout</h3>
+    </a>
+  </div>
+</aside>

@@ -1,0 +1,98 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}UNIQUE - Analytics{% endblock %}
+
+{% block content %}
+<main>
+  <h1>Analytics</h1>
+
+  <div class="date">
+    <form method="get" id="dateForm">
+      <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}" onchange="document.getElementById('dateForm').submit();">
+    </form>
+  </div>
+
+  <!-- Insights Section -->
+  <div class="insights">
+    <div class="sales">
+      <span class="material-symbols-sharp">trending_up</span>
+      <div class="middle">
+        <div class="left">
+          <h3>Total Sales</h3>
+          <h1>₹{{ total_sales|floatformat:2 }}</h1>
+        </div>
+      </div>
+      <small>Selected Date</small>
+    </div>
+
+    <div class="expenses">
+      <span class="material-symbols-sharp">bar_chart</span>
+      <div class="middle">
+        <div class="left">
+          <h3>Total Expenses</h3>
+          <h1>₹{{ total_expenses|floatformat:2 }}</h1>
+        </div>
+      </div>
+      <small>Selected Date</small>
+    </div>
+
+    <div class="income">
+      <span class="material-symbols-sharp">stacked_line_chart</span>
+      <div class="middle">
+        <div class="left">
+          <h3>Net Income (Paid)</h3>
+          <h1>₹{{ net_income|floatformat:2 }}</h1>
+        </div>
+      </div>
+      <small>Selected Date</small>
+    </div>
+  </div>
+
+  <!-- Sales Trend Chart -->
+  <section>
+    <h2>Sales Trend (Last 7 Days)</h2>
+    <canvas id="salesTrendChart" width="600" height="300"></canvas>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const ctx = document.getElementById('salesTrendChart').getContext('2d');
+  const salesTrendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: {{ sales_trend_labels|safe }},
+      datasets: [{
+        label: 'Sales (₹)',
+        data: {{ sales_trend_data|safe }},
+        fill: false,
+        borderColor: 'rgb(75, 192, 192)',
+        tension: 0.1,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true },
+        tooltip: { enabled: true }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            // Format y-axis values as currency
+            callback: function(value) {
+              return '₹' + value;
+            }
+          }
+        }
+      }
+    }
+  });
+</script>
+{% endblock %}
