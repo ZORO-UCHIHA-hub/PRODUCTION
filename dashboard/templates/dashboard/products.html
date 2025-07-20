@@ -18,7 +18,6 @@
       <thead>
         <tr>
           <th>Name</th>
-          <th>Price</th>
           <th>Base Price</th>
           <th>GST</th>
           <th>Price with GST</th>
@@ -28,29 +27,44 @@
         </tr>
       </thead>
       <tbody id="productTableBody">
-        {% for bp in branch_products %}
+        {% for bp in page_obj %}
           <tr>
             <td>{{ bp.product.name }}</td>
             <td>₹{{ bp.product.price }}</td>
             <td>{{ bp.product.gst_percent }}%</td>
-            <td>₹{{ bp.product.price_with_gst|floatformat:2 }}</td>
+            <td>₹{{ bp.product.price_with_gst|floatformat:0 }}</td>
             <td>{{ bp.branch.name }}</td>
-            <td>{{ bp.stock }}</td>
-<td class="actions">
-  <a href="#"><span class="material-symbols-sharp">visibility</span></a>
-  <a href="{% url 'edit_product' bp.product.id %}">
-  <span class="material-symbols-sharp">edit</span>
-</a>
-
-  <a href="{% url 'delete_product' bp.product.id %}"><span class="material-symbols-sharp">delete</span></a>
-</td>
-
+            <td>
+              {% if bp.product.is_service %}
+                ∞ (Service)
+              {% else %}
+                {{ bp.stock }}
+              {% endif %}
+            </td>
+            <td class="actions">
+              <a href="#"><span class="material-symbols-sharp">visibility</span></a>
+              <a href="{% url 'edit_product' bp.product.id %}"><span class="material-symbols-sharp">edit</span></a>
+              <a href="{% url 'delete_product' bp.product.id %}"><span class="material-symbols-sharp">delete</span></a>
+            </td>
           </tr>
         {% empty %}
-          <tr><td colspan="5">No products available.</td></tr>
+          <tr><td colspan="7">No products available.</td></tr>
         {% endfor %}
       </tbody>
     </table>
+
+    <!-- Pagination Controls -->
+    <div class="pagination">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}">&laquo; Previous</a>
+      {% endif %}
+
+      <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}">Next &raquo;</a>
+      {% endif %}
+    </div>
 
     <div class="item add add-product">
       <a href="{% url 'add_product' %}">
