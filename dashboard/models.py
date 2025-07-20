@@ -34,23 +34,25 @@ class Profile(models.Model):
 # Products
 # -----------------------------
 
+
+
 class Product(models.Model):
     name = models.CharField(max_length=100)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    gst_percent = models.DecimalField(max_digits=5, decimal_places=2, default=10.00)
+    price = models.DecimalField(max_digits=10, decimal_places=2)  # GST-excluded
+    gst_percent = models.DecimalField(max_digits=5, decimal_places=2, default=1.00)
+    is_service = models.BooleanField(default=False)
 
     def gst_amount(self):
         return self.price * self.gst_percent / 100
 
     def price_with_gst(self):
-        return self.price + self.gst_amount()
+        from decimal import Decimal, ROUND_HALF_UP
+        price = self.price * (1 + self.gst_percent / 100)
+        return price.quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+
 
     def __str__(self):
         return self.name
-    
-    def price_with_gst(self):
-        return self.price + (self.price * self.gst_percent / 100)
-
 
 # -----------------------------
 # Customers
@@ -135,7 +137,7 @@ class Expense(models.Model):
 class BranchProduct(models.Model):
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    stock = models.PositiveIntegerField(default=0)
+    stock = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
         unique_together = ('branch', 'product')
