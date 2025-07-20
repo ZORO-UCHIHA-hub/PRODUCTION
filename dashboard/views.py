@@ -30,6 +30,9 @@ from django.db import transaction
 from dashboard.utils.stock_alert import notify_low_stock
 from django.db.models import Q
 from django.utils.dateparse import parse_date
+from math import ceil
+from decimal import Decimal, ROUND_HALF_UP
+from django.core.paginator import Paginator
 
 
 REFERRAL_CODE = "UNIQUE2025"
@@ -696,9 +699,15 @@ def products(request):
     else:
         branch_products = BranchProduct.objects.all()
 
+    # Add pagination
+    paginator = Paginator(branch_products, 10)  # Show 10 products per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     return render(request, 'dashboard/products.html', {
-        'branch_products': branch_products,
-        'branch': branch
+        'branch_products': page_obj,
+        'branch': branch,
+        'page_obj': page_obj,
     })
 
 @login_required
@@ -1013,31 +1022,56 @@ def settings(request):
 @login_required
 def add_product(request, product_id=None):
     profile = Profile.objects.get(user=request.user)
-
-    if product_id:
-        product = get_object_or_404(Product, id=product_id)
-        editing = True
-    else:
-        product = None
-        editing = False
+    editing = product_id is not None
+    product = get_object_or_404(Product, id=product_id) if editing else None
 
     if request.method == 'POST':
         name = request.POST.get('name')
-        price = request.POST.get('price')
-        gst_percent = request.POST.get('gst_percent')  # <- New line
-        stock = request.POST.get('stock')
+        raw_inclusive_price = Decimal(request.POST.get('price') or '0.00')
+        gst_percent = Decimal(request.POST.get('gst_percent') or '1.00')
+        is_service = request.POST.get('is_service') == 'on'
+
+        # Round off GST-included price to unit
+        gst_inclusive_price = raw_inclusive_price.quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+        divisor = Decimal(1) + (gst_percent / 100)
+        base_price = (gst_inclusive_price / divisor).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+        # Get the branch (always needed now)
+        branch = profile.branch if profile.role == 'manager' else Branch.objects.get(id=request.POST.get('branch'))
 
         if editing:
             product.name = name
-            product.price = price
-            product.gst_percent = gst_percent  # <- New line
+            product.price = base_price
+            product.gst_percent = gst_percent
+            product.is_service = is_service
             product.save()
+
+            # Ensure branch-product relation exists if missing
+            bp, created = BranchProduct.objects.get_or_create(branch=branch, product=product)
+            if not is_service:
+                bp.stock = request.POST.get('stock') or 0
+                bp.save()
+
             messages.success(request, f"Product '{product.name}' updated successfully.")
         else:
-            product = Product.objects.create(name=name, price=price, gst_percent=gst_percent)  # <- Updated
-            branch = profile.branch if profile.role == 'manager' else Branch.objects.get(id=request.POST.get('branch'))
-            BranchProduct.objects.create(branch=branch, product=product, stock=stock)
-            messages.success(request, f"Product '{product.name}' added to {branch.name} with stock {stock}.")
+            product = Product.objects.create(
+                name=name,
+                price=base_price,
+                gst_percent=gst_percent,
+                is_service=is_service
+            )
+
+            stock_value = None if is_service else request.POST.get('stock')
+            BranchProduct.objects.create(
+                branch=branch,
+                product=product,
+                stock=stock_value
+            )
+
+            if is_service:
+                messages.success(request, f"Service '{product.name}' added to {branch.name}.")
+            else:
+                messages.success(request, f"Product '{product.name}' added to {branch.name} with stock {stock_value}.")
 
         return redirect('products')
 
@@ -1048,8 +1082,6 @@ def add_product(request, product_id=None):
         'is_admin': profile.role == 'admin'
     }
     return render(request, 'dashboard/add_product.html', context)
-
-
 
 @login_required
 def delete_employee(request, user_id):
