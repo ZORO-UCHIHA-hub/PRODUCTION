@@ -1194,3 +1194,92 @@ main .content-area a{
   from { opacity: 1; }
   to { opacity: 0; }
 }
+
+
+.service-checkbox {
+  display: flex;
+  align-items: center;
+  margin: 1rem 0;
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: var(--color-dark);
+  gap: 0.6rem;
+  user-select: none;
+}
+
+.service-checkbox input[type="checkbox"] {
+  display: none;
+}
+
+.service-checkbox .checkmark {
+  width: 20px;
+  height: 20px;
+  background-color: var(--color-white);
+  border: 2px solid var(--color-primary);
+  border-radius: 4px;
+  display: inline-block;
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.service-checkbox input[type="checkbox"]:checked + .checkmark {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.service-checkbox .checkmark::after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 5px;
+  top: 1px;
+  width: 6px;
+  height: 12px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.service-checkbox input[type="checkbox"]:checked + .checkmark::after {
+  display: block;
+}
+
+.service-checkbox .checkmark:hover {
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2); /* soft glow */
+  cursor: pointer;
+}
+
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 20px;
+  font-weight: 500;
+  color: var(--color-dark);
+}
+
+.pagination a {
+  background-color: var(--color-white);
+  color: var(--color-primary);
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius-1);
+  text-decoration: none;
+  transition: color 0.3s ease;
+  -webkit-transition: color 0.3s ease;
+  -moz-transition: color 0.3s ease;
+  -ms-transition: color 0.3s ease;
+  -o-transition: color 0.3s ease;
+  border-radius: var(--border-radius-2);
+  -webkit-border-radius: var(--border-radius-2);
+  -moz-border-radius: var(--border-radius-2);
+  -ms-border-radius: var(--border-radius-2);
+  -o-border-radius: var(--border-radius-2);
+
+}
+
+.pagination a:hover {
+    box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2);
+}
