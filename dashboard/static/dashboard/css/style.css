@@ -1291,3 +1291,158 @@ main .content-area a{
   width: 100%;
   font-size: 0.95rem;
 }
+
+/* Fully Responsive Order Form Layout */
+.order-form {
+  background: var(--color-white);
+  padding: 2rem;
+  border-radius: var(--card-border-radius);
+  box-shadow: var(--box-shadow);
+  max-width: 100%;
+  width: 100%;
+  margin: 2rem auto 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.order-form .form-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 45%; /* two columns on large screens */
+  min-width: 250px;
+}
+
+.order-form .btn {
+  flex: 1 1 100%;
+  background: var(--color-primary);
+  color: var(--color-white);
+  padding: 1rem 2rem;
+  font-weight: bold;
+  font-size: 1rem;
+  border: none;
+  border-radius: var(--border-radius-1);
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.order-form .btn:hover {
+  background: var(--color-primary-variant);
+}
+
+@media (max-width: 768px) {
+  .order-form {
+    flex-direction: column;
+    padding: 1rem;
+  }
+
+  .order-form .form-group {
+    flex: 1 1 100%;
+  }
+
+  .order-form .btn {
+    width: 100%;
+  }
+
+  .receipt-preview {
+    position: static;
+    width: 100%;
+    margin-top: 1rem;
+    max-width: 100%;
+    box-shadow: none;
+    border-radius: var(--border-radius-1);
+  }
+}
+
+/* 🌟 Stylish Upgrade for Order Form */
+.order-form {
+  background: var(--color-white);
+  padding: 2.5rem;
+  border-radius: var(--card-border-radius);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.06);
+  max-width: 100%;
+  width: 100%;
+  margin: 2rem auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  transition: all 0.3s ease-in-out;
+}
+
+.order-form h2 {
+  flex: 1 1 100%;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.order-form .form-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 45%;
+  min-width: 250px;
+}
+
+.order-form label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-dark-variant);
+  margin-bottom: 0.4rem;
+  transition: color 0.2s ease;
+}
+
+.order-form input,
+.order-form select {
+  padding: 0.9rem 1rem;
+  border-radius: var(--border-radius-2);
+  border: 1px solid var(--color-info-light);
+  background: #fafafa;
+  transition: border 0.3s, box-shadow 0.3s;
+  font-size: 1rem;
+  color: var(--color-dark);
+}
+
+.order-form input:focus,
+.order-form select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2);
+  background: #fff;
+}
+
+.order-form .btn {
+  flex: 1 1 100%;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-variant));
+  color: #fff;
+  padding: 1rem 2rem;
+  font-weight: bold;
+  font-size: 1.05rem;
+  border: none;
+  border-radius: var(--border-radius-2);
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.3s ease;
+  margin-top: 1rem;
+}
+
+.order-form .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(108, 99, 255, 0.3);
+}
+
+/* 📱 Mobile Styling */
+@media (max-width: 768px) {
+  .order-form {
+    flex-direction: column;
+    padding: 1.5rem;
+  }
+
+  .order-form .form-group {
+    flex: 1 1 100%;
+  }
+
+  .order-form .btn {
+    width: 100%;
+  }
+}
+
