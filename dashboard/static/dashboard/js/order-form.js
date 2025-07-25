@@ -1,23 +1,144 @@
-document.addEventListener('DOMContentLoaded', function () {
-  const form = document.getElementById('orderForm');
+document.addEventListener("DOMContentLoaded", function () {
+  // Add Item Row
+  window.addItemRow = function () {
+    const itemList = document.getElementById("itemList");
+
+    const row = document.createElement("div");
+    row.className = "item-row";
+    row.style.display = "flex";
+    row.style.gap = "1rem";
+    row.style.marginBottom = "1rem";
+
+    // Product Select
+    const productSelect = document.createElement("select");
+    productSelect.className = "product-select";
+    productSelect.required = true;
+    productSelect.style.flex = "2";
+
+    const blank = document.createElement("option");
+    blank.value = "";
+    blank.textContent = "-- Select Product --";
+    productSelect.appendChild(blank);
+
+    PRODUCTS.forEach(prod => {
+      const priceWithGST = prod.price * (1 + prod.gst_percent / 100);
+      const option = document.createElement("option");
+      option.value = prod.id;
+      option.textContent = `${prod.name} (₹${priceWithGST.toFixed(2)})`;
+      option.dataset.price = priceWithGST.toFixed(2);
+      option.dataset.base = prod.price;
+      option.dataset.gst = prod.gst_percent;
+      productSelect.appendChild(option);
+    });
+
+    // Quantity
+    const qtyInput = document.createElement("input");
+    qtyInput.type = "number";
+    qtyInput.min = 1;
+    qtyInput.value = 1;
+    qtyInput.className = "qty-input";
+    qtyInput.style.flex = "1";
+
+    // Price display
+    const priceDisplay = document.createElement("span");
+    priceDisplay.className = "price-display";
+    priceDisplay.style.flex = "1";
+    priceDisplay.textContent = "₹0.00";
+
+    // Remove button
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.textContent = "✖";
+    removeBtn.onclick = () => {
+      row.remove();
+      updateTotal();
+    };
+
+    row.append(productSelect, qtyInput, priceDisplay, removeBtn);
+    itemList.appendChild(row);
+
+    $(productSelect).select2({
+      placeholder: "-- Select Product --",
+      width: "100%"
+    });
+
+    productSelect.addEventListener("change", () => {
+      const selected = productSelect.selectedOptions[0];
+      priceDisplay.textContent = selected ? `₹${selected.dataset.price}` : "₹0.00";
+      updateTotal();
+      syncLatestRow();
+    });
+
+    qtyInput.addEventListener("input", () => {
+      updateTotal();
+      syncLatestRow();
+    });
+
+    updateTotal();
+    syncLatestRow();
+  };
+
+  // Sync inputs
+  window.syncLatestRow = function () {
+    const rows = document.querySelectorAll(".item-row");
+    if (!rows.length) return;
+
+    const lastRow = rows[rows.length - 1];
+    const qtyInput = lastRow.querySelector(".qty-input");
+    const select = lastRow.querySelector(".product-select");
+
+    const price = parseFloat(select.selectedOptions[0]?.dataset.price || 0);
+    const qty = parseInt(qtyInput.value || 1);
+
+    const total = price * qty;
+
+    document.getElementById("itemPrice").value = price.toFixed(2);
+    document.getElementById("itemQty").value = qty;
+    document.getElementById("totalAmount").value = total.toFixed(2);
+
+    document.getElementById("itemQty").oninput = () => {
+      qtyInput.value = document.getElementById("itemQty").value;
+      updateTotal();
+    };
+  };
+
+  // Calculate totals
+  window.updateTotal = function () {
+    const rows = document.querySelectorAll(".item-row");
+    let subTotal = 0;
+    let totalGST = 0;
+
+    rows.forEach(row => {
+      const select = row.querySelector(".product-select");
+      const qty = parseInt(row.querySelector(".qty-input")?.value || 0);
+
+      const product = PRODUCTS.find(p => p.id == select.value);
+      if (!product) return;
+
+      const basePrice = parseFloat(product.price);
+      const gst = parseFloat(product.gst_percent);
+      const lineTotal = basePrice * qty;
+      const gstAmount = (basePrice * gst / 100) * qty;
+
+      subTotal += lineTotal;
+      totalGST += gstAmount;
+    });
+
+    const totalWithGST = subTotal + totalGST;
+
+    document.getElementById("grandTotal").value = subTotal.toFixed(2);
+    document.getElementById("totalWithGST").value = totalWithGST.toFixed(2);
+
+    syncLatestRow();
+  };
+
+  // Handle form submit
+  const form = document.getElementById("orderForm");
   if (!form) return;
 
-  // Open customer modal on phone click
-  const customerPhoneInput = document.getElementById('customerPhone');
-  if (customerPhoneInput) {
-    customerPhoneInput.addEventListener('click', () => {
-      const customerModal = document.getElementById('customerModal');
-      if (customerModal) {
-        customerModal.style.display = 'flex';
-      }
-    });
-  }
-
-  // Handle form submission
-  form.addEventListener('submit', async function (e) {
+  form.addEventListener("submit", async function (e) {
     e.preventDefault();
 
-    // Gather data
     const customerId = document.getElementById('customer_id').value;
     const customerName = document.getElementById('custName').textContent;
     const customerPhone = document.getElementById('custPhone').textContent.replace(/\D/g, '');
@@ -27,21 +148,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const total = parseFloat(document.getElementById('grandTotal').value) || 0;
     const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
 
-    const rows = document.querySelectorAll('.item-row');
     const items = [];
-
-    rows.forEach(row => {
-      const productId = row.querySelector('select.product-select')?.value;
-      const qty = parseInt(row.querySelector('input.qty-input')?.value);
+    document.querySelectorAll('.item-row').forEach(row => {
+      const productId = row.querySelector('.product-select')?.value;
+      const qty = parseInt(row.querySelector('.qty-input')?.value);
       if (productId && qty > 0) {
         items.push({ product_id: productId, quantity: qty });
       }
     });
 
-    if (!items.length) {
-      alert("⚠️ Please add at least one item.");
-      return;
-    }
+    if (!items.length) return alert("⚠️ Please add at least one item.");
 
     const payload = {
       branch_id: branchId,
@@ -61,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function () {
         ? `/orders/${editingSaleId}/update/`
         : '/orders/new/';
 
-      const response = await fetch(url, {
+      const res = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -70,78 +186,21 @@ document.addEventListener('DOMContentLoaded', function () {
         body: JSON.stringify(payload)
       });
 
-      const result = await response.json();
-
+      const result = await res.json();
       if (result.sale_id) {
-        // ✅ Show receipt preview
-        showReceiptPreview(customerName, customerPhone, customerGST, items, total, paid);
-
-        // ✅ Open print-friendly receipt
-        const receiptURL = `/orders/thermal-receipt/${result.sale_id}/`;
-        window.open(receiptURL, '_blank', 'width=400,height=600');
-
-        // ✅ Optional: send via WhatsApp
-        sendWhatsAppReceipt(customerPhone, customerName, total, paid);
+        window.open(`/orders/thermal-receipt/${result.sale_id}/`, '_blank');
       } else {
         alert(result.error || "❌ Something went wrong!");
       }
     } catch (err) {
-      console.error("Order failed:", err);
-      alert("❌ Failed to submit order. Try again.");
+      console.error(err);
+      alert("❌ Order failed. Try again.");
     }
   });
 
-  // Get CSRF token from cookie
+  // CSRF
   function getCSRFToken() {
-    const name = 'csrftoken';
-    const cookie = document.cookie.split(';').find(c => c.trim().startsWith(name + '='));
+    const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
     return cookie ? decodeURIComponent(cookie.split('=')[1]) : '';
-  }
-
-  // 🧾 Show Receipt Modal
-  window.showReceiptPreview = function (name, phone, gst, items, total, paid) {
-    const rows = document.querySelectorAll('.item-row');
-    const rItems = document.getElementById('rItems');
-    rItems.innerHTML = "";
-
-    rows.forEach(row => {
-      const select = row.querySelector('.product-select');
-      const qty = parseInt(row.querySelector('.qty-input').value) || 0;
-      const price = parseFloat(select.selectedOptions[0]?.dataset.price || 0);
-      const itemName = select.selectedOptions[0]?.textContent;
-      const lineTotal = qty * price;
-
-      const itemLine = document.createElement('p');
-      itemLine.textContent = `${itemName} — ${qty} × ₹${price.toFixed(2)} = ₹${lineTotal.toFixed(2)}`;
-      rItems.appendChild(itemLine);
-    });
-
-    document.getElementById("rGrand").textContent = total.toFixed(2);
-    document.getElementById("rPaid").textContent = paid.toFixed(2);
-    document.getElementById("rName").textContent = name || "—";
-    document.getElementById("rPhone").textContent = phone || "—";
-    document.getElementById("rGST").textContent = gst || "—";
-    document.getElementById("rDate").textContent = new Date().toLocaleString();
-
-    document.getElementById("receiptModal").style.display = "flex";
-  };
-
-  // 🖨️ Print receipt from thermal view
-  window.printReceipt = function (saleId) {
-    const printWindow = window.open(`/orders/thermal-receipt/${saleId}`, '_blank', 'width=400,height=600');
-    if (!printWindow) {
-      alert("❌ Popup was blocked! Please allow popups for this site.");
-    }
-  };
-
-  // 📱 Send WhatsApp receipt
-  function sendWhatsAppReceipt(phone, name, total, paid) {
-    if (!phone || phone.length < 10) return;
-
-    const now = new Date().toLocaleString();
-    const msg = `Hello ${name}, thank you for shopping at UNIQUE STORE!\nDate: ${now}\nTotal: ₹${total}\nPaid: ₹${paid}\nVisit again!`;
-    const encoded = encodeURIComponent(msg);
-    const url = `https://wa.me/91${phone}?text=${encoded}`;
-    window.open(url, '_blank');
   }
 });
