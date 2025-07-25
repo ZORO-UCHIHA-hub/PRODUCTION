@@ -18,21 +18,37 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// Populate dropdown for order page modal
 function populateCustomerOptions() {
   const select = document.getElementById("modalCustomerSelect");
   if (!select || typeof CUSTOMERS === 'undefined') return;
 
-  select.innerHTML = '<option value="">-- Choose a Customer --</option>';
+  // 🧹 Clear previous options without breaking Select2
+  while (select.options.length > 0) {
+    select.remove(0);
+  }
+
+  // Add placeholder option
+  const defaultOption = document.createElement('option');
+  defaultOption.value = '';
+  defaultOption.textContent = '-- Choose a Customer --';
+  select.appendChild(defaultOption);
+
+  // Add each customer
   CUSTOMERS.forEach(c => {
     const option = document.createElement('option');
     option.value = c.id;
     option.textContent = c.name;
     option.dataset.phone = c.phone;
-    option.dataset.gst = c.gst;
+    option.dataset.gst = c.gst || '';
     select.appendChild(option);
   });
+
+  // ✅ Trigger Select2 refresh (important after programmatically changing options)
+  if ($(select).hasClass("select2-hidden-accessible")) {
+    $(select).trigger('change.select2');
+  }
 }
+
 
 function openCustomerModal() {
   const modal = document.getElementById("addCustomerModal");
@@ -191,3 +207,15 @@ function closeCustomerModal() {
   if (!modal) return;
   modal.style.display = "none";
 }
+
+// ✅ Apply Select2 on customer dropdown
+window.addEventListener("DOMContentLoaded", () => {
+  const customerSelect = document.getElementById("modalCustomerSelect");
+  if (customerSelect) {
+    $(customerSelect).select2({
+      placeholder: "Search by name or phone",
+      allowClear: true,
+      width: "resolve"
+    });
+  }
+});
