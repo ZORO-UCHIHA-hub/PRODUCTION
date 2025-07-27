@@ -87,6 +87,8 @@ class Sale(models.Model):
     parent_sale = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='child_sales')
     is_archived = models.BooleanField(default=False)
     memo_pdf = models.FileField(upload_to='memos/', null=True, blank=True)
+    payment_method = models.CharField(max_length=20, default="Cash")
+    total_override = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     def total_amount(self):
         return sum(item.total_price() for item in self.items.all())
