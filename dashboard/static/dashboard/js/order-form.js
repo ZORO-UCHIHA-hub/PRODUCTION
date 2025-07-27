@@ -1,82 +1,80 @@
 document.addEventListener("DOMContentLoaded", function () {
   // Add Item Row
-  window.addItemRow = function () {
-    const itemList = document.getElementById("itemList");
+window.addItemRow = function () {
+  const itemList = document.getElementById("itemList");
 
-    const row = document.createElement("div");
-    row.className = "item-row";
-    row.style.display = "flex";
-    row.style.gap = "1rem";
-    row.style.marginBottom = "1rem";
+  const row = document.createElement("div");
+  row.className = "item-row";
+  row.style.display = "flex";
+  row.style.gap = "1rem";
+  row.style.marginBottom = "1rem";
 
-    // Product Select
-    const productSelect = document.createElement("select");
-    productSelect.className = "product-select";
-    productSelect.required = true;
-    productSelect.style.flex = "2";
+  const productSelect = document.createElement("select");
+  productSelect.className = "product-select";
+  productSelect.required = true;
+  productSelect.style.flex = "2";
 
-    const blank = document.createElement("option");
-    blank.value = "";
-    blank.textContent = "-- Select Product --";
-    productSelect.appendChild(blank);
+  const blank = document.createElement("option");
+  blank.value = "";
+  blank.textContent = "-- Select Product --";
+  productSelect.appendChild(blank);
 
-    PRODUCTS.forEach(prod => {
-      const priceWithGST = prod.price * (1 + prod.gst_percent / 100);
-      const option = document.createElement("option");
-      option.value = prod.id;
-      option.textContent = `${prod.name} (₹${priceWithGST.toFixed(2)})`;
-      option.dataset.price = priceWithGST.toFixed(2);
-      option.dataset.base = prod.price;
-      option.dataset.gst = prod.gst_percent;
-      productSelect.appendChild(option);
-    });
+  PRODUCTS.forEach(prod => {
+    const priceWithGST = prod.price * (1 + prod.gst_percent / 100);
+    const option = document.createElement("option");
+    option.value = prod.id;
+    option.textContent = `${prod.name} (₹${priceWithGST.toFixed(2)})`;
+    option.dataset.price = priceWithGST.toFixed(2);
+    option.dataset.base = prod.price;
+    option.dataset.gst = prod.gst_percent;
+    productSelect.appendChild(option);
+  });
 
-    // Quantity
-    const qtyInput = document.createElement("input");
-    qtyInput.type = "number";
-    qtyInput.min = 1;
-    qtyInput.value = 1;
-    qtyInput.className = "qty-input";
-    qtyInput.style.flex = "1";
+  const qtyInput = document.createElement("input");
+  qtyInput.type = "number";
+  qtyInput.min = 1;
+  qtyInput.value = 1;
+  qtyInput.className = "qty-input";
+  qtyInput.style.flex = "1";
 
-    // Price display
-    const priceDisplay = document.createElement("span");
-    priceDisplay.className = "price-display";
-    priceDisplay.style.flex = "1";
-    priceDisplay.textContent = "₹0.00";
+  const priceDisplay = document.createElement("span");
+  priceDisplay.className = "price-display";
+  priceDisplay.style.flex = "1";
+  priceDisplay.textContent = "₹0.00";
 
-    // Remove button
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.textContent = "✖";
-    removeBtn.onclick = () => {
-      row.remove();
-      updateTotal();
-    };
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.textContent = "✖";
+  removeBtn.onclick = () => {
+    row.remove();
+    updateTotal();
+  };
 
-    row.append(productSelect, qtyInput, priceDisplay, removeBtn);
-    itemList.appendChild(row);
+  row.append(productSelect, qtyInput, priceDisplay, removeBtn);
+  itemList.appendChild(row);
 
-    $(productSelect).select2({
-      placeholder: "-- Select Product --",
-      width: "100%"
-    });
+  $(productSelect).select2({
+    placeholder: "-- Select Product --",
+    width: "100%"
+  });
 
-    productSelect.addEventListener("change", () => {
-      const selected = productSelect.selectedOptions[0];
-      priceDisplay.textContent = selected ? `₹${selected.dataset.price}` : "₹0.00";
-      updateTotal();
-      syncLatestRow();
-    });
-
-    qtyInput.addEventListener("input", () => {
-      updateTotal();
-      syncLatestRow();
-    });
-
+  productSelect.addEventListener("change", () => {
+    const selected = productSelect.selectedOptions[0];
+    priceDisplay.textContent = selected ? `₹${selected.dataset.price}` : "₹0.00";
     updateTotal();
     syncLatestRow();
-  };
+  });
+
+  qtyInput.addEventListener("input", () => {
+    updateTotal();
+    syncLatestRow();
+  });
+
+  // ✅ Trigger change immediately to show price
+  productSelect.dispatchEvent(new Event("change"));
+};
+
+
 
   // Sync inputs
   window.syncLatestRow = function () {
@@ -103,34 +101,40 @@ document.addEventListener("DOMContentLoaded", function () {
   };
 
   // Calculate totals
-  window.updateTotal = function () {
-    const rows = document.querySelectorAll(".item-row");
-    let subTotal = 0;
-    let totalGST = 0;
+window.updateTotal = function () {
+  const rows = document.querySelectorAll(".item-row");
+  let subTotal = 0;
+  let totalGST = 0;
 
-    rows.forEach(row => {
-      const select = row.querySelector(".product-select");
-      const qty = parseInt(row.querySelector(".qty-input")?.value || 0);
+  rows.forEach(row => {
+    const select = row.querySelector(".product-select");
+    const qty = parseInt(row.querySelector(".qty-input")?.value || 0);
+    const product = PRODUCTS.find(p => p.id == select.value);
+    if (!product) return;
 
-      const product = PRODUCTS.find(p => p.id == select.value);
-      if (!product) return;
+    const basePrice = parseFloat(product.price);
+    const gst = parseFloat(product.gst_percent);
+    const lineTotal = basePrice * qty;
+    const gstAmount = (basePrice * gst / 100) * qty;
 
-      const basePrice = parseFloat(product.price);
-      const gst = parseFloat(product.gst_percent);
-      const lineTotal = basePrice * qty;
-      const gstAmount = (basePrice * gst / 100) * qty;
+    subTotal += lineTotal;
+    totalGST += gstAmount;
+  });
 
-      subTotal += lineTotal;
-      totalGST += gstAmount;
-    });
+  const totalWithGST = subTotal + totalGST;
 
-    const totalWithGST = subTotal + totalGST;
+  // Update calculated values
+  document.getElementById("grandTotal").value = subTotal.toFixed(2);
 
-    document.getElementById("grandTotal").value = subTotal.toFixed(2);
-    document.getElementById("totalWithGST").value = totalWithGST.toFixed(2);
+  const totalWithGSTField = document.getElementById("totalWithGST");
 
-    syncLatestRow();
-  };
+  if (!totalWithGSTField.matches(":focus")) {
+    totalWithGSTField.value = totalWithGST.toFixed(2); // If not manually edited, update
+  }
+
+  syncLatestRow();
+};
+
 
   // Handle form submit
   const form = document.getElementById("orderForm");
@@ -145,13 +149,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const customerGST = document.getElementById('custGST').textContent;
     const gstInput = document.getElementById('gst_number').value;
     const branchId = document.getElementById('branchSelect').value;
-    const total = parseFloat(document.getElementById('grandTotal').value) || 0;
+    const total = parseFloat(document.getElementById('totalWithGST').value) || 0;
+    const paymentMethod = document.getElementById('paymentMethod').value;
     const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
 
     const items = [];
     document.querySelectorAll('.item-row').forEach(row => {
       const productId = row.querySelector('.product-select')?.value;
-      const qty = parseInt(row.querySelector('.qty-input')?.value);
+      const qty = parseInt(row.querySelector('.qty-input')?.value || "0");
       if (productId && qty > 0) {
         items.push({ product_id: productId, quantity: qty });
       }
@@ -168,7 +173,8 @@ document.addEventListener("DOMContentLoaded", function () {
       total,
       paid,
       gst_input: gstInput,
-      items
+      items,
+      payment_method: paymentMethod
     };
 
     try {
@@ -203,4 +209,31 @@ document.addEventListener("DOMContentLoaded", function () {
     const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
     return cookie ? decodeURIComponent(cookie.split('=')[1]) : '';
   }
+
+  // ✅ Recalculate subtotal when user manually edits totalWithGST
+document.getElementById("totalWithGST").addEventListener("input", () => {
+  const rows = document.querySelectorAll(".item-row");
+
+  let estimatedGST = 0;
+
+  rows.forEach(row => {
+    const select = row.querySelector(".product-select");
+    const qty = parseInt(row.querySelector(".qty-input")?.value || 0);
+    const product = PRODUCTS.find(p => p.id == select.value);
+    if (!product || qty <= 0) return;
+
+    const base = parseFloat(product.price);
+    const gstPercent = parseFloat(product.gst_percent || 0);
+    estimatedGST += (base * gstPercent / 100) * qty;
+  });
+
+  const editedTotal = parseFloat(document.getElementById("totalWithGST").value || 0);
+  const newSubtotal = editedTotal - estimatedGST;
+
+  if (!isNaN(newSubtotal) && newSubtotal >= 0) {
+    document.getElementById("grandTotal").value = newSubtotal.toFixed(2);
+  }
+});
+
+
 });
