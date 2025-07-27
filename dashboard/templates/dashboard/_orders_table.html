@@ -20,7 +20,15 @@
           {{ item.product.name }}{% if not forloop.last %}, {% endif %}
         {% endfor %}
       </td>
-      <td>₹{{ sale.total_price }}</td>
+      <td>
+  {% if sale.total_override %}
+    <span class="strike">₹{{ sale.total_price }}</span><br>
+    <strong class="offer-label">₹{{ sale.total_override }}</strong>
+  {% else %}
+    ₹{{ sale.total_price }}
+  {% endif %}
+</td>
+
       {% if is_admin %}
         <td>{{ sale.branch.name }}</td>
       {% endif %}
