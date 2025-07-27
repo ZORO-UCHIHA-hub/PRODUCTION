@@ -3,38 +3,119 @@
 <head>
   <title>Receipt #{{ sale.id }}</title>
   <style>
-    body { font-family: monospace; font-size: 12px; padding: 10px; }
-    .receipt-line { margin-bottom: 8px; }
-    .center { text-align: center; }
-    hr { border: none; border-top: 1px dashed #333; margin: 10px 0; }
+    body {
+      font-family: monospace;
+      font-size: 10px;
+      padding: 0;
+      margin: 0;
+      width: 58mm;
+    }
+    .receipt {
+      padding: 5px;
+      width: 100%;
+    }
+    .center {
+      text-align: center;
+    }
+    .right {
+      text-align: right;
+    }
+    .line {
+      display: flex;
+      justify-content: space-between;
+    }
+    .dashed {
+      border-top: 1px dashed #000;
+      margin: 5px 0;
+    }
+    h2, p {
+      margin: 2px 0;
+    }
+    .offer-label {
+      color: #e60000;
+      font-weight: bold;
+    }
+    .strike {
+      text-decoration: line-through;
+      color: #999;
+    }
   </style>
 </head>
 <body onload="window.print(); window.close();">
-  <div class="center">
-    <h2>🧾 UNIQUE STORE</h2>
-    <p>{{ sale.branch.name }}<br>{{ sale.branch.location }}</p>
-    <hr>
+  <div class="receipt">
+    <!-- Header -->
+    <div class="center">
+      <h2>🧾 UNIQUE STORE</h2>
+      <p>{{ sale.branch.name }}</p>
+      <p>{{ sale.branch.location }}</p>
+    </div>
+
+    <div class="dashed"></div>
+
+    <!-- Customer Info -->
     <p>Customer: {{ sale.customer.name }}</p>
     <p>Phone: {{ sale.customer.phone }}</p>
-    <hr>
+
+    <div class="dashed"></div>
+
+    <!-- Items -->
+    {% for item in items %}
+      <div>
+        <div class="line">
+          <span>{{ item.product.name|truncatechars:20 }}</span>
+          <span>x{{ item.quantity }}</span>
+        </div>
+        <div class="line">
+          <span>Rate:</span>
+          <span>₹{{ item.price|floatformat:2 }}</span>
+        </div>
+      </div>
+    {% endfor %}
+
+    <div class="dashed"></div>
+
+    <!-- Totals -->
+{% if sale.total_override %}
+  <div class="line strike">
+    <span>Subtotal:</span><span>₹{{ subtotal|floatformat:2 }}</span>
   </div>
+  <div class="line">
+    <strong>Offer Subtotal:</strong><strong>₹{{ subtotal|floatformat:2 }}</strong>
+  </div>
+  <div class="line">
+    <strong>Offer GST:</strong><strong>₹{{ gst_total|floatformat:2 }}</strong>
+  </div>
+  <div class="line">
+    <strong>Total (Offer):</strong><strong>₹{{ total|floatformat:2 }}</strong>
+  </div>
+{% else %}
+  <div class="line">
+    <strong>Subtotal:</strong><strong>₹{{ subtotal|floatformat:2 }}</strong>
+  </div>
+  <div class="line">
+    <strong>GST Total:</strong><strong>₹{{ gst_total|floatformat:2 }}</strong>
+  </div>
+  <div class="line">
+    <strong>Total:</strong><strong>₹{{ total|floatformat:2 }}</strong>
+  </div>
+{% endif %}
 
-  {% for item in items %}
-    <div class="receipt-line">
-      {{ item.product.name }} x{{ item.quantity }}  
-      ₹{{ item.price|floatformat:2 }}  
+
+
+    <div class="line">
+      <strong>Paid:</strong>
+      <strong>₹{{ sale.amount_paid|floatformat:2 }}</strong>
     </div>
-  {% endfor %}
 
-  <hr>
-  <p>Subtotal: ₹{{ subtotal|floatformat:2 }}</p>
-  <p>GST Total: ₹{{ gst_total|floatformat:2 }}</p>
-  <strong>Total: ₹{{ total|floatformat:2 }}</strong><br>
-  Paid: ₹{{ sale.amount_paid|floatformat:2 }}
-  <hr>
-  <div class="center">
-    <p>{{ sale.date|date:"d M Y, H:i" }}</p>
-    <p>Thank you for shopping!</p>
+    <p><strong>Payment Method:</strong> {{ sale.payment_method }}</p>
+
+    <div class="dashed"></div>
+
+    <!-- Footer -->
+    <div class="center">
+      <p>{{ sale.date|date:"d M Y, H:i" }}</p>
+      <p>Thank you for shopping!</p>
+    </div>
   </div>
 </body>
 </html>
