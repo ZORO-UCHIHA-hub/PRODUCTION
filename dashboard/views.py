@@ -92,7 +92,7 @@ def neworder(request):
                     return JsonResponse({'error': 'Customer name and phone are required.'}, status=400)
                 customer, _ = Customer.objects.get_or_create(
                     phone=customer_phone,
-                    defaults={'name': customer_name, 'gst_number': customer_gst, 'branch': None}  # globally available
+                    defaults={'name': customer_name, 'gst_number': customer_gst, 'branch': None}
                 )
 
             items = data.get('items', [])
@@ -102,27 +102,36 @@ def neworder(request):
             product_ids = [int(item['product_id']) for item in items]
             products = Product.objects.in_bulk(product_ids)
 
-            total = data.get('total', 0)
-            paid = data.get('paid', 0)
-            # gst_input = data.get('gst_input', '')
+            total = float(data.get('total', 0))
+            paid = float(data.get('paid', 0))
+            payment_method = data.get('payment_method', 'Cash')
             gst_number = customer.gst_number or profile.gst_number or ''
 
             with transaction.atomic():
                 branch_products = {
                     bp.product_id: bp for bp in BranchProduct.objects.select_for_update()
-                        .filter(branch=branch, product_id__in=product_ids)
+                    .filter(branch=branch, product_id__in=product_ids)
                 }
 
-                # Check stock availability
+                # ✅ Check stock, fallback for services
                 for item in items:
                     product_id = int(item['product_id'])
                     quantity = item['quantity']
+                    product = products.get(product_id)
+
+                    if not product:
+                        return JsonResponse({'error': f"Product with ID {product_id} not found."}, status=400)
+
+                    # Skip stock check for services
+                    if product.is_service:
+                        continue
 
                     bp = branch_products.get(product_id)
                     if not bp:
-                        return JsonResponse({'error': f"Product not available in selected branch."}, status=400)
-                    if bp.stock < quantity:
-                        return JsonResponse({'error': f"Insufficient stock for {products[product_id].name}."}, status=400)
+                        return JsonResponse({'error': f"Product '{product.name}' not available in selected branch."}, status=400)
+
+                    if bp.stock is None or bp.stock < quantity:
+                        return JsonResponse({'error': f"Insufficient stock for {product.name}."}, status=400)
 
                 # Create Sale
                 sale = Sale.objects.create(
@@ -131,7 +140,9 @@ def neworder(request):
                     staff=profile,
                     amount_paid=paid,
                     gst_number=gst_number,
-                    date=timezone.now()
+                    date=timezone.now(),
+                    payment_method=payment_method,
+                    total_override=total if total > 0 else None
                 )
 
                 # Create SaleItems and update stock
@@ -148,47 +159,65 @@ def neworder(request):
                         sale=sale,
                         product=product,
                         quantity=quantity,
-                        price=price_with_gst,  # <- Store GST-inclusive price
+                        price=price_with_gst,
                         gst_percent=gst_percent,
                         gst_amount=gst_amount
                     )
 
-                    bp = branch_products[product_id]
-                    bp.stock = F('stock') - quantity
-                    bp.save()
-                    bp.refresh_from_db()
-                    notify_low_stock(bp)
+                    # Only reduce stock if not a service
+                    if not product.is_service:
+                        bp = branch_products[product_id]
+                        bp.stock = F('stock') - quantity
+                        bp.save()
+                        bp.refresh_from_db()
+                        notify_low_stock(bp)
 
-                return JsonResponse({'message': 'Order placed successfully.', 'sale_id': sale.id, 'gst_number':sale.gst_number, 'date': sale.date.isoformat()})
+                # 🔢 Compute override subtotal & GST for receipt
+                if sale.total_override:
+                    override_total = sale.total_override
+                    override_subtotal = round(override_total / 1.18, 2)
+                    override_gst = round(override_total - override_subtotal, 2)
+                else:
+                    override_subtotal = None
+                    override_gst = None
+
+                return JsonResponse({
+                    'message': 'Order placed successfully.',
+                    'sale_id': sale.id,
+                    'gst_number': sale.gst_number,
+                    'date': sale.date.isoformat(),
+                    'override_subtotal': override_subtotal,
+                    'override_gst': override_gst
+                })
 
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
-    # GET request
+    # For GET (render page)
     if profile.role == 'admin':
         branches = Branch.objects.all()
         selected_branch_id = None
         customers = Customer.objects.all()
-        products = Product.objects.all()  # admins can see all products
+        products = Product.objects.all()
     else:
         branches = []
         selected_branch_id = profile.branch.id if profile.branch else None
-        customers = Customer.objects.filter(Q(branch=profile.branch) | Q(branch__isnull=True))  # global + branch
-        products = Product.objects.filter(branchproduct__branch=profile.branch).distinct()  # ✅ Only branch products
+        customers = Customer.objects.filter(Q(branch=profile.branch) | Q(branch__isnull=True))
+        products = Product.objects.filter(branchproduct__branch=profile.branch).distinct()
 
     customer_data = [
         {'id': c.id, 'name': c.name, 'phone': c.phone, 'gst': c.gst_number or ''}
         for c in customers
     ]
     product_data = [
-    {
-        'id': p.id,
-        'name': p.name,
-        'price': float(p.price),
-        'gst_percent': float(p.gst_percent)
-    }
-    for p in products
-]
+        {
+            'id': p.id,
+            'name': p.name,
+            'price': float(p.price),
+            'gst_percent': float(p.gst_percent)
+        }
+        for p in products
+    ]
 
     return render(request, 'dashboard/new-order.html', {
         'customers': customer_data,
@@ -317,36 +346,52 @@ def print_thermal_receipt(request, sale_id):
     sale = get_object_or_404(Sale, id=sale_id)
     items = sale.items.all()
 
-    # Inline subtotal/GST calculations
     subtotal = Decimal("0.00")
     gst_total = Decimal("0.00")
-    grand_total = Decimal("0.00")
+    item_totals = []
 
+    # Calculate totals using stored price (inclusive of GST)
     for item in items:
-        product = item.product
         qty = item.quantity
-        base_price = product.price
-        gst_percent = product.gst_percent
-        gst_amount = (base_price * gst_percent / 100).quantize(Decimal("0.01"))
+        gst_percent = item.gst_percent
+        price_incl_gst = item.price  # already includes GST
 
-        item.unit_price = base_price
-        item.unit_gst = gst_amount
-        item.subtotal = base_price * qty
-        item.total_gst = gst_amount * qty
-        item.total = item.subtotal + item.total_gst
+        divisor = Decimal(1) + (gst_percent / 100)
+        price_excl_gst = (price_incl_gst / divisor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        gst_unit = (price_incl_gst - price_excl_gst).quantize(Decimal("0.01"))
 
-        subtotal += item.subtotal
-        gst_total += item.total_gst
-        grand_total += item.total
+        line_subtotal = price_excl_gst * qty
+        line_gst_total = gst_unit * qty
+        line_total = price_incl_gst * qty
+
+        item.unit_base = price_excl_gst
+        item.unit_gst = gst_unit
+        item.line_subtotal = line_subtotal
+        item.line_gst = line_gst_total
+        item.line_total = line_total
+
+        subtotal += line_subtotal
+        gst_total += line_gst_total
+
+        item_totals.append(item)
+
+    total = subtotal + gst_total
+
+    # If offer/override is used, proportionally adjust subtotal and gst_total
+    if sale.total_override:
+        total = sale.total_override
+        ratio = total / (subtotal + gst_total) if (subtotal + gst_total) else Decimal(1)
+        subtotal = (subtotal * ratio).quantize(Decimal("0.01"))
+        gst_total = (gst_total * ratio).quantize(Decimal("0.01"))
 
     return render(request, "dashboard/receipt_thermal.html", {
         "sale": sale,
-        "items": items,
+        "items": item_totals,
         "subtotal": subtotal,
         "gst_total": gst_total,
-        "total": grand_total,
-        "branch": sale.branch,
+        "total": total,
     })
+
 
 
 def generate_pdf(sale):
