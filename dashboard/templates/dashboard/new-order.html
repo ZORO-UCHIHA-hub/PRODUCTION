@@ -76,14 +76,28 @@
     </div>
 
     <div class="form-group">
-      <label for="totalWithGST">Total (Incl. GST)</label>
-      <input type="number" id="totalWithGST" readonly>
-    </div>
+  <label for="totalWithGST">Total (Incl. GST)</label>
+  <input type="number" id="totalWithGST" step="0.01">
+  <small style="font-size: 10px;">(Editable for offers/discounts)</small>
+</div>
+
 
     <div class="form-group">
       <label for="amountPaid">Amount Paid</label>
       <input type="number" id="amountPaid" required>
     </div>
+
+    <div class="form-group">
+  <label for="paymentMethod">Payment Method</label>
+  <select id="paymentMethod" required>
+    <option value="Cash">Cash</option>
+    <option value="Card">Card</option>
+    <option value="UPI">UPI</option>
+    <option value="Wallet">Wallet</option>
+    <option value="Mixed">Mixed</option>
+  </select>
+</div>
+
 
     <button class="btn" type="submit">Place Order</button>
     <button class="btn" type="button" onclick="showReceipt()">View Receipt</button>
